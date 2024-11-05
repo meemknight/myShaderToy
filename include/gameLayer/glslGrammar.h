@@ -20,3 +20,5 @@ struct Token
 
 
 std::vector<Token> tokenizeGLSL(const char *text);
+
+bool hasVersion(std::vector<Token> &tokens, const char *text);

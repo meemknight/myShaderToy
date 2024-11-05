@@ -263,13 +263,25 @@ bool RunningShader::reload()
 		std::string fragmentData = readFileToString((this->name + ".frag").c_str());
 
 
-		auto rez = tokenizeGLSL(vertexData.c_str());
+		auto rez = tokenizeGLSL(fragmentData.c_str());
 
-		for (auto &i : rez)
+
+		//for (auto &i : rez)
+		//{
+		//	std::string t(vertexData.data() + i.start, vertexData.data() + i.end);
+		//	std::cout << i.type << " ->  " << t << "\n";
+		//}
+
+
+		if (!hasVersion(rez, fragmentData.c_str()))
 		{
+			std::cout << "No version!";
 
-			std::string t(vertexData.data() + i.start, vertexData.data() + i.end);
-			std::cout << i.type << " ->  " << t << "\n";
+			fragmentData = "#version 330 core\n" + fragmentData;
+		}
+		else
+		{
+			std::cout << "has version!";
 		}
 
 		//add main function
