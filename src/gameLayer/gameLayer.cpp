@@ -51,7 +51,8 @@ bool gameLogic(float deltaTime)
 
 	runningShader.updateSize();
 
-	runningShader.shader.bind();
+	runningShader.bindAndSendUniforms();
+
 	glBindFramebuffer(GL_FRAMEBUFFER, runningShader.frameBuffer.fbo);
 	glViewport(0, 0, runningShader.w, runningShader.h);
 

@@ -130,6 +130,58 @@ bool Shader::loadShaderProgramFromFile(const char* vertexShader, const char* fra
 	return true;
 }
 
+bool Shader::loadShaderProgramFromData(const char *vertexData, const char *fragmentData)
+{
+	auto vertexId = createShaderFromData(vertexData, GL_VERTEX_SHADER);
+
+	if (vertexId == 0) { return 0; }
+
+	auto fragmentId = createShaderFromData(fragmentData, GL_FRAGMENT_SHADER);
+
+	if (fragmentId == 0)
+	{
+		glDeleteShader(vertexId);
+		return 0;
+	}
+
+	id = glCreateProgram();
+
+	glAttachShader(id, vertexId);
+	glAttachShader(id, fragmentId);
+
+	glLinkProgram(id);
+
+	glDeleteShader(vertexId);
+	glDeleteShader(fragmentId);
+
+	GLint info = 0;
+	glGetProgramiv(id, GL_LINK_STATUS, &info);
+
+	if (info != GL_TRUE)
+	{
+		char *message = 0;
+		int   l = 0;
+
+		glGetProgramiv(id, GL_INFO_LOG_LENGTH, &l);
+
+		message = new char[l];
+
+		glGetProgramInfoLog(id, l, &l, message);
+
+		std::cout << "Link error: " << message << "\n";
+
+		delete[] message;
+
+		glDeleteProgram(id);
+		id = 0;
+		return 0;
+	}
+
+	glValidateProgram(id);
+
+	return true;
+}
+
 bool Shader::loadShaderProgramFromFile(const char* vertexShader, const char* geometryShader, const char* fragmentShader)
 {
 

@@ -6,6 +6,9 @@ out vec2 v_position;
 
 void main()
 {
+	int a = 0;
+	a == 10;
+
 	gl_Position = vec4(p, 0, 1);
 	v_position = p;
 }
