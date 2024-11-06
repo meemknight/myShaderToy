@@ -58,9 +58,11 @@ std::vector<Token> tokenizeGLSL(const char *text)
 
 	auto isLetterOrUnderscore = [&]()
 	{
+		auto c = text[currentPos];
+
 		return 
-			(text[currentPos] >= 'a' && text[currentPos] >= 'z') ||
-			(text[currentPos] >= 'A' && text[currentPos] >= 'Z') ||
+			(text[currentPos] >= 'a' && text[currentPos] <= 'z') ||
+			(text[currentPos] >= 'A' && text[currentPos] <= 'Z') ||
 			text[currentPos] == '_'
 			;
 	};
@@ -85,6 +87,11 @@ std::vector<Token> tokenizeGLSL(const char *text)
 		consumeNewLineOrSpace();
 		if (eof()) { break; }
 
+		if (currentPos == 5113)
+		{
+			int t = 0;
+		}
+
 		// we have a string token!
 		if (isLetterOrUnderscore())
 		{
@@ -96,8 +103,8 @@ std::vector<Token> tokenizeGLSL(const char *text)
 			{
 				consumeCharacter();
 				t.end = currentPos;
-
-				if (eof() || isSymbol() || isNewLine())
+				
+				if (eof() || isSymbol() || isNewLine() || isBlankSpace())
 				{
 					break;
 				}
@@ -511,7 +518,7 @@ bool isStringViewSame(const char *text, int start, int end, const char *other)
 }
 
 //takes a tokenized directive!
-bool parseVersion(std::vector<Token> &tokens, const char *text)
+bool parseVersion(std::vector<Token> &tokens, const char *text, int *posIntextEnd)
 {
 	int pos = 0;
 	auto eof = [&]() -> bool
@@ -523,7 +530,7 @@ bool parseVersion(std::vector<Token> &tokens, const char *text)
 
 	auto consumeString = [&](const char *s) -> bool
 	{
-		
+		if (eof()) { return 0; };
 		if (tokens[pos].type == Token_String)
 		{
 			if (isStringViewSame(text, tokens[pos].start, tokens[pos].end, s))
@@ -537,6 +544,8 @@ bool parseVersion(std::vector<Token> &tokens, const char *text)
 	
 	auto consumeNumber = [&]() -> bool
 	{
+		if (eof()) { return 0; };
+
 		if (tokens[pos].type == Token_Number)
 		{
 			consume();
@@ -550,7 +559,20 @@ bool parseVersion(std::vector<Token> &tokens, const char *text)
 	if (!consumeString("version")) { return 0; };
 	if (!consumeNumber()) { return 0; }
 
-	if(eof() || consumeString("core")) 
+	if (posIntextEnd)
+	{
+		*posIntextEnd = tokens[pos - 1].end;
+	}
+
+	if(consumeString("core"))
+	{
+		if (posIntextEnd)
+		{
+			*posIntextEnd = tokens[pos - 1].end;
+		}
+		//good
+	}
+	else if (eof())
 	{
 		//good
 	}
@@ -565,7 +587,7 @@ bool parseVersion(std::vector<Token> &tokens, const char *text)
 
 }
 
-bool hasVersion(std::vector<Token> &tokens, const char *text)
+bool hasVersion(std::vector<Token> &tokens, const char *text, int *posInTextEnd)
 {
 
 	int pos = 0;
@@ -587,8 +609,369 @@ bool hasVersion(std::vector<Token> &tokens, const char *text)
 		//	std::cout << " ->  " << t << "\n";
 		//}
 		
-		return parseVersion(directiveTokens, text);
+		return parseVersion(directiveTokens, text, posInTextEnd);
 	}
 
 	return false;
 }
+
+bool hasMainFunction(std::vector<Token> &tokens, const char *text)
+{
+	int pos = 0;
+
+	auto eof = [&]() -> bool
+	{
+		return pos >= tokens.size();
+	};
+
+	auto consume = [&]() { pos++; };
+
+	auto consumeString = [&](const char *s) -> bool
+	{
+		if (eof()) { return 0; }
+
+		if (tokens[pos].type == Token_String)
+		{
+			if (isStringViewSame(text, tokens[pos].start, tokens[pos].end, s))
+			{
+				consume();
+				return true;
+			}
+		}
+		return 0;
+	};
+
+	auto consumeCommentsAndPragma = [&]()
+	{
+		if (eof()) { return false; }
+
+		if (tokens[pos].type == Token_Comment || tokens[pos].type == Token_Directive)
+		{
+			consume();
+			return true;
+		}
+		return false;
+	};
+
+	auto consumeSymbol = [&](char s)
+	{
+		if (eof()) { return false; }
+
+		if (tokens[pos].type == Token_Symbol && tokens[pos].end - tokens[pos].start == 1
+			&& text[tokens[pos].start] == s
+			)
+		{
+			consume();
+			return true;
+		}
+		return false;
+	};
+	
+	while (!eof())
+	{
+		
+		if (consumeString("void"))
+		{
+
+			while (consumeCommentsAndPragma()) {};
+
+			if (consumeString("main"))
+			{
+
+				while (consumeCommentsAndPragma()) {};
+
+				if (consumeSymbol('('))
+				{
+					while (consumeCommentsAndPragma()) {};
+					if (consumeSymbol(')'))
+					{
+						return true;
+					}
+				}
+
+			}
+		}
+		else
+		{
+			consume();
+		}
+
+	}
+
+	return false;
+}
+
+bool hasMainColorOutput(std::vector<Token> &tokens, const char *text, 
+	std::string *name, int *type)
+{
+
+	int pos = 0;
+
+	auto eof = [&]() -> bool
+	{
+		return pos >= tokens.size();
+	};
+
+	auto consume = [&]() { pos++; };
+
+	auto consumeString = [&](const char *s) -> bool
+	{
+		if (eof()) { return 0; }
+
+		if (tokens[pos].type == Token_String)
+		{
+			if (isStringViewSame(text, tokens[pos].start, tokens[pos].end, s))
+			{
+				consume();
+				return true;
+			}
+		}
+		return 0;
+	};
+
+
+	auto consumeCommentsAndPragma = [&]()
+	{
+		if (eof()) { return false; }
+
+		if (tokens[pos].type == Token_Comment || tokens[pos].type == Token_Directive)
+		{
+			consume();
+			return true;
+		}
+		return false;
+	};
+
+	auto consumeSymbol = [&](char s)
+	{
+		if (eof()) { return false; }
+
+		if (tokens[pos].type == Token_Symbol && tokens[pos].end - tokens[pos].start == 1
+			&& text[tokens[pos].start] == s
+			)
+		{
+			consume();
+			return true;
+		}
+		return false;
+	};
+
+	auto consumeNumber = [&]()
+	{
+		if (eof()) { return false; }
+
+		if (tokens[pos].type == Token_Number
+			)
+		{
+			consume();
+			return true;
+		}
+		return false;
+	};
+
+	auto consumeAllCommentsAndPragma = [&]()
+	{
+		while (consumeCommentsAndPragma()) {};
+	};
+
+
+	while (!eof())
+	{
+		//layout(location = 0) out vec4 out_color;
+
+		std::string currentString = std::string(
+			text + tokens[pos].start, text + tokens[pos].end);
+
+		if (consumeString("layout"))
+		{
+			consumeAllCommentsAndPragma();
+
+			if (consumeSymbol('('))
+			{
+				consumeAllCommentsAndPragma();
+
+				std::string currentString = std::string(
+					text + tokens[pos].start, text + tokens[pos].end);
+
+				if (consumeString("location"))
+				{
+					consumeAllCommentsAndPragma();
+
+					if (consumeSymbol('='))
+					{
+						consumeAllCommentsAndPragma();
+
+						if (consumeNumber())
+						{
+							consumeAllCommentsAndPragma();
+
+							std::string currentString = std::string(
+								text + tokens[pos].start, text + tokens[pos].end);
+
+							if (consumeSymbol(')'))
+							{
+								consumeAllCommentsAndPragma();
+
+								consumeString("out");
+
+								consumeAllCommentsAndPragma();
+
+								if (eof()) { break; }
+
+								if (tokens[pos].type == Token_String)
+								{
+
+									//todo get type
+
+									consume();
+									consumeAllCommentsAndPragma();
+
+									if (eof()) { break; }
+
+									if (tokens[pos].type == Token_String)
+									{
+
+										if (name)
+										{
+											*name = std::string(
+												text + tokens[pos].start, text + tokens[pos].end);
+										}
+
+										consume();
+										consumeAllCommentsAndPragma();
+
+										if (consumeSymbol(';'))
+										{
+											return true;
+										}
+
+									}
+
+								}
+
+							}
+
+						}
+
+					}
+				}
+				
+
+			}
+
+		}
+		else
+		{
+			consume();
+		}
+
+
+	}
+
+
+
+	return 0;
+}
+
+bool hasUniform(std::vector<Token> &tokens, 
+	const char *text, const char *name, const char *type)
+{
+	int pos = 0;
+
+	auto eof = [&]() -> bool
+	{
+		return pos >= tokens.size();
+	};
+
+	auto consume = [&]() { pos++; };
+
+	auto consumeString = [&](const char *s) -> bool
+	{
+		if (eof()) { return 0; }
+
+		if (tokens[pos].type == Token_String)
+		{
+			if (isStringViewSame(text, tokens[pos].start, tokens[pos].end, s))
+			{
+				consume();
+				return true;
+			}
+		}
+		return 0;
+	};
+
+
+	auto consumeCommentsAndPragma = [&]()
+	{
+		if (eof()) { return false; }
+
+		if (tokens[pos].type == Token_Comment || tokens[pos].type == Token_Directive)
+		{
+			consume();
+			return true;
+		}
+		return false;
+	};
+
+	auto consumeSymbol = [&](char s)
+	{
+		if (eof()) { return false; }
+
+		if (tokens[pos].type == Token_Symbol && tokens[pos].end - tokens[pos].start == 1
+			&& text[tokens[pos].start] == s
+			)
+		{
+			consume();
+			return true;
+		}
+		return false;
+	};
+
+	auto consumeNumber = [&]()
+	{
+		if (eof()) { return false; }
+
+		if (tokens[pos].type == Token_Number
+			)
+		{
+			consume();
+			return true;
+		}
+		return false;
+	};
+
+	auto consumeAllCommentsAndPragma = [&]()
+	{
+		while (consumeCommentsAndPragma()) {};
+	};
+
+	while (!eof())
+	{
+
+		if (!consumeString("uniform"))
+		{
+			consume();
+			continue;
+		}
+		
+		consumeAllCommentsAndPragma();
+
+		if (!consumeString(type))
+		{
+			consume();
+			continue;
+		}
+
+		if (consumeString(name))
+		{
+			return true;
+		}
+
+	}
+
+
+
+	return false;
+}
+
+

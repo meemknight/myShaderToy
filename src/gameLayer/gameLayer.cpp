@@ -50,6 +50,7 @@ bool gameLogic(float deltaTime)
 #pragma region render
 
 	runningShader.updateSize();
+	runningShader.updateSimulation(deltaTime);
 
 	runningShader.bindAndSendUniforms();
 

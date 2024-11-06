@@ -43,7 +43,11 @@ bool fullScreen = 0;
 
 #pragma endregion
 
-
+extern "C"
+{
+	__declspec(dllexport) unsigned long NvOptimusEnablement = 1;
+	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
 
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {

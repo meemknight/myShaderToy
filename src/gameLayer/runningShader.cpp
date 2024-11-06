@@ -63,12 +63,12 @@ void RunningShader::displaySettings()
 		}
 		else if (u.type == GL_FLOAT_VEC3)
 		{
-			ImGui::DragFloat3(u.name.c_str(), &u.data.vec4[0]);
-			//ImGui::ColorEdit3(u.name.c_str(), &u.data.vec4[0]);
+			//ImGui::DragFloat3(u.name.c_str(), &u.data.vec4[0]);
+			ImGui::ColorEdit3(u.name.c_str(), &u.data.vec4[0]);
 		}else if (u.type == GL_FLOAT_VEC4)
 		{
-			ImGui::DragFloat4(u.name.c_str(), &u.data.vec4[0]);
-			//ImGui::ColorEdit4(u.name.c_str(), &u.data.vec4[0]);
+			//ImGui::DragFloat4(u.name.c_str(), &u.data.vec4[0]);
+			ImGui::ColorEdit4(u.name.c_str(), &u.data.vec4[0]);
 		}
 
 		else if (u.type == GL_INT)
@@ -173,6 +173,8 @@ void RunningShader::displayPreview()
 		windowInput.x -= windowPos.x + vMin.x;
 		windowInput.y -= windowPos.y + vMin.y;
 
+		currentMousePos = windowInput;
+		currentMousePos.y = h - (currentMousePos.y);
 
 		//https://github.com/ocornut/imgui/issues/5882
 		ImGuiViewport *viewPort = ImGui::GetWindowViewport();
@@ -272,36 +274,120 @@ bool RunningShader::reload()
 		//	std::cout << i.type << " ->  " << t << "\n";
 		//}
 
+		std::string newFragment = fragmentData;
+		std::string newFragmentStart = "";
+		int versionPos = 0;
 
-		if (!hasVersion(rez, fragmentData.c_str()))
+		if (!hasVersion(rez, fragmentData.c_str(), &versionPos))
 		{
 			std::cout << "No version!";
 
-			fragmentData = "#version 330 core\n" + fragmentData;
+			newFragmentStart += "#version 330 core\n";
 		}
 		else
 		{
 			std::cout << "has version!";
 		}
 
-		//add main function
-		if (true)
+		std::string mainColorOutputName;
+		if (!hasMainColorOutput(rez, fragmentData.c_str(), &mainColorOutputName))
 		{
-		
-			fragmentData += 
+			std::cout << "No main color output!";
+
+			mainColorOutputName = "out_color";
+			newFragmentStart += "\nlayout (location = 0) out vec4 out_color;\n";
+			
+		}
+		else
+		{
+			std::cout << "has main color output! " << mainColorOutputName << "\n";
+		}
+
+	#pragma region add uniforms
+		//uniform iResolution = -1;        // viewport resolution (in pixels)		->	vec3      
+		//uniform iTime = -1;              // shader playback time (in seconds)		->	float     
+		//uniform iTimeDelta = -1;         // render time (in seconds)				->	float     
+		//uniform iFrameRate = -1;         // shader frame rate						->	float     
+		//uniform iFrame = -1;             // shader playback frame					->	int       
+		//uniform iMouse = -1;             // mouse pixel coords. xy: current (if MLB down), zw: click -> vec4    
+
+		if (!hasUniform(rez, fragmentData.c_str(), "iResolution", "vec3"))
+		{
+			newFragmentStart += "\nuniform vec3 iResolution;\n";
+		}
+
+		if (!hasUniform(rez, fragmentData.c_str(), "iTime", "float"))
+		{
+			newFragmentStart += "\nuniform float iTime;\n";
+		}
+
+		if (!hasUniform(rez, fragmentData.c_str(), "iTimeDelta", "float"))
+		{
+			newFragmentStart += "\nuniform float iTimeDelta;\n";
+		}
+
+		if (!hasUniform(rez, fragmentData.c_str(), "iFrameRate", "float"))
+		{
+			newFragmentStart += "\nuniform float iFrameRate;\n";
+		}
+
+		if (!hasUniform(rez, fragmentData.c_str(), "iFrame", "int"))
+		{
+			newFragmentStart += "\nuniform int iFrame;\n";
+		}
+
+		if (!hasUniform(rez, fragmentData.c_str(), "iMouse", "vec4"))
+		{
+			newFragmentStart += "\nuniform vec4 iMouse;\n";
+		}
+
+	#pragma endregion
+
+
+		//add main function
+		if (!hasMainFunction(rez, fragmentData.c_str()))
+		{
+			std::cout << "No main function!";
+
+			newFragment +=
 				R"(
+
 				void main()
 				{
-				vec4 outColor = vec4(0, 0, 0, 0);
-				mainImage(outColor, gl_FragCoord.xy);
-				out_color = outColor;
-				}
+				vec4 outColorLocalImpl54421234_5_ = vec4(0, 0, 0, 0);
+				mainImage(outColorLocalImpl54421234_5_, gl_FragCoord.xy);
 				)";
+				
+			newFragment += mainColorOutputName;
+
+			newFragment += R"( = outColorLocalImpl54421234_5_;})";
+
+
+		}
+		else
+		{
+			std::cout << "Has main function!";
 		}
 
 
+		if (versionPos)
+		{
+			newFragment =
+				std::string(newFragment.data(), newFragment.data() + versionPos) 
+					+
+					newFragmentStart
+					+
+				std::string(newFragment.data() + versionPos);
+		}
+		else
+		{
+			newFragment = newFragmentStart + newFragment;
+		}
+
+
+
 		shader.loadShaderProgramFromData(
-			vertexData.c_str(), fragmentData.c_str()
+			vertexData.c_str(), newFragment.c_str()
 		);
 
 	}
@@ -358,7 +444,7 @@ bool RunningShader::reload()
 		for (int j = 0; j < sizeof(uniformNames) / sizeof(uniformNames[0]); j++)
 		{
 
-			if (strstr(name, uniformNames[j]) == 0)
+			if (strstr(name, uniformNames[j]))
 			{
 				notGood = true;
 				break;
@@ -472,11 +558,49 @@ void RunningShader::bindAndSendUniforms()
 
 	//special uniforms
 	glUniform3f(specialUniforms.iResolution, w, h, 0);
-	glUniform1f(specialUniforms.iTime, 0); //todo
-	glUniform1f(specialUniforms.iTimeDelta, 0); //todo
-	glUniform1f(specialUniforms.iFrameRate, 0); //todo
-	glUniform1i(specialUniforms.iFrame, 0); //todo
-	glUniform4f(specialUniforms.iMouse, 0,0,0,0); //todo
+	glUniform1f(specialUniforms.iTime, accumulatedTime);
+	glUniform1f(specialUniforms.iTimeDelta, deltaTime);
+	glUniform1f(specialUniforms.iFrameRate, (float)currentFrameRate);
+	glUniform1i(specialUniforms.iFrame, frameNumber);
+
+	glm::vec4 mouseInput = {lastDownMousePos, lastClickMousePos};
+
+	if (!mouseDown) { mouseInput.z *= -1; }
+	if (!mouseClicked) { mouseInput.w *= -1; }
+
+	glUniform4f(specialUniforms.iMouse, mouseInput.x, mouseInput.y, mouseInput.z, mouseInput.w); //todo
+
+}
+
+void RunningShader::updateSimulation(float deltaTime)
+{
+	this->deltaTime = deltaTime;
+	accumulatedTime += deltaTime;
+
+	frameNumber++;
+
+	countedSeccond += deltaTime;
+	countedFrameRate++;
+
+	if (countedSeccond > 1.f)
+	{
+		countedSeccond -= 1;
+		currentFrameRate = countedFrameRate;
+		countedFrameRate = 0;
+	}
+
+	mouseDown = platform::isLMouseHeld() || platform::isRMouseHeld();
+	mouseClicked = platform::isLMousePressed() || platform::isRMousePressed();
+	
+	if (mouseDown)
+	{
+		lastDownMousePos = currentMousePos;
+	}
+
+	if (mouseClicked)
+	{
+		lastClickMousePos = currentMousePos;
+	}
 
 }
 

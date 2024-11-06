@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-
+#include <string>
 
 constexpr int Token_None = 0;
 constexpr int Token_String = 1;
@@ -21,4 +21,10 @@ struct Token
 
 std::vector<Token> tokenizeGLSL(const char *text);
 
-bool hasVersion(std::vector<Token> &tokens, const char *text);
+bool hasVersion(std::vector<Token> &tokens, const char *text, int *posInTextEnd);
+
+bool hasMainFunction(std::vector<Token> &tokens, const char *text);
+
+bool hasMainColorOutput(std::vector<Token> &tokens, const char *text, std::string *name = 0, int *type = 0);
+
+bool hasUniform(std::vector<Token> &tokens, const char *text, const char* name, const char* type);

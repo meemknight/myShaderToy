@@ -32,6 +32,7 @@ struct Uniform
 		glm::ivec4 ivec4;
 		glm::uvec4 uvec4;
 	}data = {};
+
 };
 
 struct RunningShader
@@ -58,7 +59,24 @@ struct RunningShader
 
 	bool reload();
 
+	void updateSimulation(float deltaTime);
+
 	void bindAndSendUniforms();
+
+	float accumulatedTime = 0;
+	float deltaTime = 0;
+
+	int countedFrameRate = 0;
+	int currentFrameRate = 0;
+	float countedSeccond = 0;
+	int frameNumber = 0;
+
+	glm::vec2 currentMousePos = {};
+
+	glm::vec2 lastDownMousePos = {};
+	glm::vec2 lastClickMousePos = {};
+	bool mouseDown = 0;
+	bool mouseClicked = 0;
 
 	struct
 	{
