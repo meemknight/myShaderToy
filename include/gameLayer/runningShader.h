@@ -4,7 +4,8 @@
 #include <gl2d/gl2d.h>
 #include <string>
 #include <TextEditor.h>
-
+#include <filesystem>
+#include <vector>
 
 struct Renderer2D
 {
@@ -15,6 +16,16 @@ struct Renderer2D
 	void init();
 	void render();
 	
+	void loadDefaultTextures();
+
+	struct Texture
+	{
+		gl2d::Texture t;
+		std::string name;
+	};
+
+	std::vector<Texture> defaultTextures;
+	gl2d::Texture blackTexture;
 };
 
 using uniform = GLint;
@@ -35,6 +46,13 @@ struct Uniform
 
 };
 
+struct ShaderInputBuffer
+{
+	gl2d::Texture t;
+
+	//todo settings
+};
+
 struct RunningShader
 {
 
@@ -44,6 +62,8 @@ struct RunningShader
 	std::vector<Uniform> uniforms;
 	TextEditor textEditor;
 
+	ShaderInputBuffer inputBuffers[4];
+
 	int w = 1; 
 	int h = 1;
 
@@ -51,9 +71,9 @@ struct RunningShader
 
 	void updateSize();
 
-	void displayImgui();
+	void displayImgui(Renderer2D &renderer);
 
-	void displaySettings();
+	void displaySettings(Renderer2D &renderer);
 
 	void displayPreview();
 
@@ -61,7 +81,7 @@ struct RunningShader
 
 	void updateSimulation(float deltaTime);
 
-	void bindAndSendUniforms();
+	void bindAndSendUniforms(Renderer2D &renderer);
 
 	float accumulatedTime = 0;
 	float deltaTime = 0;
@@ -88,7 +108,10 @@ struct RunningShader
 		//uniform iChannelTime[4];       // channel playback time (in seconds)	->	float     
 		//uniform iChannelResolution[4]; // channel resolution (in pixels)		->	vec3      
 		uniform iMouse = -1;             // mouse pixel coords. xy: current (if MLB down), zw: click ->	vec4      
-		//uniform iChannel0..3;          // input channel. XX = 2D/Cube			->	samplerXX 
+		uniform iChannel0 = -1;			 // input channel. XX = 2D/Cube			->	samplerXX 
+		uniform iChannel1 = -1;
+		uniform iChannel2 = -1;
+		uniform iChannel3 = -1;
 		//uniform iDate;                 // (year, month, day, time in seconds)	->	vec4      
 		//uniform iSampleRate;           // sound sample rate (i.e., 44100)		->	float     
 

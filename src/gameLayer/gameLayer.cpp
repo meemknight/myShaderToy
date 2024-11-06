@@ -24,6 +24,7 @@ bool initGame()
 
 	runningShader.init(RESOURCES_PATH "test");
 	renderer.init();
+	renderer.loadDefaultTextures();
 
 	return true;
 }
@@ -52,7 +53,7 @@ bool gameLogic(float deltaTime)
 	runningShader.updateSize();
 	runningShader.updateSimulation(deltaTime);
 
-	runningShader.bindAndSendUniforms();
+	runningShader.bindAndSendUniforms(renderer);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, runningShader.frameBuffer.fbo);
 	glViewport(0, 0, runningShader.w, runningShader.h);
@@ -61,7 +62,7 @@ bool gameLogic(float deltaTime)
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	runningShader.displayImgui();
+	runningShader.displayImgui(renderer);
 
 #pragma endregion
 

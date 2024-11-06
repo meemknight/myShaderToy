@@ -6,6 +6,7 @@
 #include <platform/platformInput.h>
 #include <fstream>
 #include <glslGrammar.h>
+#include <imguiStuff.h>
 
 bool RunningShader::init(const char *name)
 {
@@ -26,12 +27,12 @@ void RunningShader::updateSize()
 }
 
 
-void RunningShader::displayImgui()
+void RunningShader::displayImgui(Renderer2D &renderer)
 {
 	
 	displayPreview();
 
-	displaySettings();
+	displaySettings(renderer);
 
 	std::string textEditorName = this->name + " edit";
 	ImGui::Begin(textEditorName.c_str());
@@ -39,7 +40,7 @@ void RunningShader::displayImgui()
 	ImGui::End();
 }
 
-void RunningShader::displaySettings()
+void RunningShader::displaySettings(Renderer2D &renderer)
 {
 	std::string windowName = name + " settings";
 
@@ -134,6 +135,60 @@ void RunningShader::displaySettings()
 	ImGui::Separator();
 	ImGui::NewLine();
 
+
+	ImGui::Text("Buffers: ");
+
+	//if()
+	for (int i = 0; i < 4; i++)
+	{
+		auto b = &inputBuffers[i];
+
+		if (b->t.id == 0)
+		{
+			b->t.id = renderer.blackTexture.id;
+		}
+	}
+
+	if (renderer.defaultTextures.size())
+	{
+
+		auto drawButton = [&](int index)
+		{
+
+			auto id = inputBuffers[index].t.id;
+
+			if (!id) { id = renderer.blackTexture.id; }
+
+			const char *names[4] = {
+				"iChannel0",
+				"iChannel1",
+				"iChannel2",
+				"iChannel3"
+			};
+
+			if (drawImageButtonWithLabelAndCog((ImTextureID)id,
+				names[index], {140, 140}
+				))
+			{
+				inputBuffers[index].t.id = renderer.defaultTextures[0].t.id;
+			}
+
+		};
+		
+
+		drawButton(0);
+		ImGui::SameLine();
+		drawButton(1);
+		ImGui::SameLine();
+		drawButton(2);
+		ImGui::SameLine();
+		drawButton(3);
+
+
+	}
+
+
+
 	ImGui::End();
 }
 
@@ -227,6 +282,10 @@ const char *uniformNames[] = {
 	"iFrameRate",
 	"iFrame",
 	"iMouse",
+	"iChannel0",
+	"iChannel1",
+	"iChannel2",
+	"iChannel3",
 };
 
 std::string readFileToString(const char *filePath)
@@ -337,9 +396,19 @@ bool RunningShader::reload()
 		}
 
 		if (!hasUniform(rez, fragmentData.c_str(), "iMouse", "vec4"))
-		{
-			newFragmentStart += "\nuniform vec4 iMouse;\n";
-		}
+		{newFragmentStart += "\nuniform vec4 iMouse;\n";}
+
+		if (!hasUniform(rez, fragmentData.c_str(), "iChannel0", "sampler2D"))
+		{newFragmentStart += "\nuniform sampler2D iChannel0;\n";}
+
+		if (!hasUniform(rez, fragmentData.c_str(), "iChannel1", "sampler2D"))
+		{newFragmentStart += "\nuniform sampler2D iChannel1;\n";}
+
+		if (!hasUniform(rez, fragmentData.c_str(), "iChannel2", "sampler2D"))
+		{newFragmentStart += "\nuniform sampler2D iChannel2;\n";}
+
+		if (!hasUniform(rez, fragmentData.c_str(), "iChannel3", "sampler2D"))
+		{newFragmentStart += "\nuniform sampler2D iChannel3;\n";}
 
 	#pragma endregion
 
@@ -473,11 +542,18 @@ bool RunningShader::reload()
 	specialUniforms.iFrameRate = glGetUniformLocation(shader.id, "iFrameRate");
 	specialUniforms.iFrame = glGetUniformLocation(shader.id, "iFrame");
 	specialUniforms.iMouse = glGetUniformLocation(shader.id, "iMouse");
+
+	specialUniforms.iChannel0 = glGetUniformLocation(shader.id, "iChannel0");
+	specialUniforms.iChannel1 = glGetUniformLocation(shader.id, "iChannel1");
+	specialUniforms.iChannel2 = glGetUniformLocation(shader.id, "iChannel2");
+	specialUniforms.iChannel3 = glGetUniformLocation(shader.id, "iChannel3");
 	
+	
+
 	return true;
 }
 
-void RunningShader::bindAndSendUniforms()
+void RunningShader::bindAndSendUniforms(Renderer2D &renderer)
 {
 	
 	shader.bind();
@@ -570,6 +646,26 @@ void RunningShader::bindAndSendUniforms()
 
 	glUniform4f(specialUniforms.iMouse, mouseInput.x, mouseInput.y, mouseInput.z, mouseInput.w); //todo
 
+
+	glUniform1i(specialUniforms.iChannel0, 0);
+	glUniform1i(specialUniforms.iChannel1, 1);
+	glUniform1i(specialUniforms.iChannel2, 2);
+	glUniform1i(specialUniforms.iChannel3, 3);
+
+	
+	for (int i = 0; i < 4; i++)
+	{
+		auto b = &inputBuffers[i];
+
+		if (b->t.id == 0)
+		{
+			b->t.id = renderer.blackTexture.id;
+		}
+
+		b->t.bind(i);
+	}
+
+
 }
 
 void RunningShader::updateSimulation(float deltaTime)
@@ -631,5 +727,71 @@ void Renderer2D::render()
 {
 	glBindVertexArray(vao);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
+}
+
+void Renderer2D::loadDefaultTextures()
+{
+
+	const unsigned char buff[] =
+	{
+		0x00,
+		0x00,
+		0x00,
+		0xff
+	};
+
+	blackTexture.create1PxSquare((const char*)buff);
+
+	for (auto &f : std::filesystem::directory_iterator(RESOURCES_PATH "defaultTextures"))
+	{
+
+
+		if (f.is_regular_file())
+		{
+
+
+			auto path = f.path();
+			auto extension = path.extension().string();
+
+			for (auto &i : extension) { i = tolower(i); }
+
+			if (extension == ".png" ||
+				extension == ".jpg" ||
+				extension == ".jpeg" ||
+				extension == ".bmp" ||
+				extension == ".gif" ||
+				extension == ".psd" ||
+				extension == ".pic" ||
+				extension == ".pnm" ||
+				extension == ".hdr" ||
+				extension == ".tga"
+				)
+			{
+
+				gl2d::Texture t;
+				t.loadFromFile(path.string().c_str());
+
+				if (t.id)
+				{
+					Texture rezult;
+					rezult.t = t;
+					rezult.name = path.filename().string();
+
+					defaultTextures.push_back(rezult);
+				}
+				
+
+			}
+
+
+
+		}
+
+
+
+	}
+
+
+
 }
 
