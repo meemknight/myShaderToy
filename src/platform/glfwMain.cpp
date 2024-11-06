@@ -367,9 +367,10 @@ int main()
 	#if REMOVE_IMGUI == 0
 		ImGui::CreateContext();
 		//ImGui::StyleColorsDark();				//you can use whatever imgui theme you like!
+		//ImGui::StyleColorsLight();
 		//imguiThemes::yellow();
-		//imguiThemes::gray();
-		imguiThemes::green();
+		imguiThemes::gray();
+		//imguiThemes::green();
 		//imguiThemes::red();
 		//imguiThemes::embraceTheDarkness();
 
@@ -408,16 +409,7 @@ int main()
 			config.GlyphMinAdvanceX = 16.0f; // Use if you want to make the icon monospaced
 			static const ImWchar icon_ranges[] = {ICON_MIN_FK, ICON_MAX_FK, 0};
 			io.Fonts->AddFontFromFileTTF(RESOURCES_PATH "fontawesome-webfont.ttf", 16.0f, &config, icon_ranges);
-
-			{
-				ImVector<ImWchar> ranges;
-				ImFontGlyphRangesBuilder builder;
-				builder.AddChar(0xf016);//ICON_FK_FILE_O
-				builder.AddChar(0xf114);//ICON_FK_FOLDER_O
-				builder.BuildRanges(&ranges);
-
-				io.Fonts->AddFontFromFileTTF(RESOURCES_PATH "fontawesome-webfont.ttf", 150.f, 0, ranges.Data);
-			}
+			
 			io.Fonts->Build();
 
 		}

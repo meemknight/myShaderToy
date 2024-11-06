@@ -166,16 +166,25 @@ void RunningShader::displaySettings(Renderer2D &renderer)
 				"iChannel3"
 			};
 
+			bool pressedCog = 0;
+			bool pressedX = 0;
+
 			if (drawImageButtonWithLabelAndCog((ImTextureID)id,
-				names[index], {140, 140}
+				names[index], {140, 140}, pressedCog, pressedX
 				))
 			{
-				inputBuffers[index].t.id = renderer.defaultTextures[0].t.id;
+				selectedInputBuffer = index;
+				inputSelectorOpen = true;
+				ImGui::OpenPopup("Select Input Popup");
+			}
+
+			if (pressedX)
+			{
+				inputBuffers[index].t.id = renderer.blackTexture.id;
 			}
 
 		};
 		
-
 		drawButton(0);
 		ImGui::SameLine();
 		drawButton(1);
@@ -184,6 +193,85 @@ void RunningShader::displaySettings(Renderer2D &renderer)
 		ImGui::SameLine();
 		drawButton(3);
 
+		//ImGui::SetNextWindowSize(ImVec2(400, 300));
+
+		if (ImGui::BeginPopupModal("Select Input Popup", &inputSelectorOpen))
+		{
+
+			if (!inputSelectorOpen) { ImGui::CloseCurrentPopup(); }
+
+			// Begin vertical tab bar
+			if (ImGui::BeginTabBar("TabBar"))
+			{
+
+				// "Misc" tab
+				if (ImGui::BeginTabItem("Misc"))
+				{
+					ImGui::NewLine();
+
+					if (ImGui::Button("Misc Button"))
+					{
+						ImGui::CloseCurrentPopup(); // Close the popup when this button is pressed
+					}
+					ImGui::EndTabItem();
+				}
+
+				// "Textures" tab
+				if (ImGui::BeginTabItem("Textures"))
+				{
+					ImGui::NewLine();
+
+					for (int i = 0; i < renderer.defaultTextures.size(); i++)
+					{
+
+						if (ImGui::ImageButton((void *)renderer.defaultTextures[i].t.id,
+							{140, 140}, {0,1}, {1,0}
+							))
+						{
+							inputBuffers[selectedInputBuffer].t = renderer.defaultTextures[i].t;
+							ImGui::CloseCurrentPopup();
+						}
+
+						if (!(i % 4 == 3))
+						{
+							ImGui::SameLine();
+						}
+
+					}
+					
+					ImGui::EndTabItem();
+				}
+
+				// "Cubemaps" tab
+				if (ImGui::BeginTabItem("Cubemaps"))
+				{
+					ImGui::NewLine();
+
+					if (ImGui::Button("Cubemaps Button"))
+					{
+						ImGui::CloseCurrentPopup();
+					}
+					ImGui::EndTabItem();
+				}
+
+				// "Volumes" tab
+				if (ImGui::BeginTabItem("Volumes"))
+				{
+					ImGui::NewLine();
+					
+					if (ImGui::Button("Volumes Button"))
+					{
+						ImGui::CloseCurrentPopup();
+					}
+					ImGui::EndTabItem();
+				}
+
+				ImGui::EndTabBar();
+			}
+
+
+			ImGui::EndPopup();
+		}
 
 	}
 
@@ -230,6 +318,10 @@ void RunningShader::displayPreview()
 
 		currentMousePos = windowInput;
 		currentMousePos.y = h - (currentMousePos.y);
+
+		focused = 1;
+		if(currentMousePos.x < 0 || currentMousePos.y < 0 || currentMousePos.x > w ||
+			currentMousePos.y > h){ focused = 0; }
 
 		//https://github.com/ocornut/imgui/issues/5882
 		ImGuiViewport *viewPort = ImGui::GetWindowViewport();
@@ -641,8 +733,8 @@ void RunningShader::bindAndSendUniforms(Renderer2D &renderer)
 
 	glm::vec4 mouseInput = {lastDownMousePos, lastClickMousePos};
 
-	if (!mouseDown) { mouseInput.z *= -1; }
-	if (!mouseClicked) { mouseInput.w *= -1; }
+	if (!mouseDown || !focused) { mouseInput.z *= -1; }
+	if (!mouseClicked || !focused) { mouseInput.w *= -1; }
 
 	glUniform4f(specialUniforms.iMouse, mouseInput.x, mouseInput.y, mouseInput.z, mouseInput.w); //todo
 
@@ -688,15 +780,20 @@ void RunningShader::updateSimulation(float deltaTime)
 	mouseDown = platform::isLMouseHeld() || platform::isRMouseHeld();
 	mouseClicked = platform::isLMousePressed() || platform::isRMousePressed();
 	
-	if (mouseDown)
-	{
-		lastDownMousePos = currentMousePos;
-	}
+	currentMousePos = glm::clamp(currentMousePos, glm::vec2(0, 0), glm::vec2(w, h));
 
-	if (mouseClicked)
+	if (focused)
 	{
-		lastClickMousePos = currentMousePos;
-	}
+		if (mouseDown)
+		{
+			lastDownMousePos = currentMousePos;
+		}
+
+		if (mouseClicked)
+		{
+			lastClickMousePos = currentMousePos;
+		}
+	};
 
 }
 

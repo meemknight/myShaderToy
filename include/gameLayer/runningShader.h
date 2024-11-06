@@ -62,6 +62,8 @@ struct RunningShader
 	std::vector<Uniform> uniforms;
 	TextEditor textEditor;
 
+	int selectedInputBuffer = 0;
+	bool inputSelectorOpen = 0;
 	ShaderInputBuffer inputBuffers[4];
 
 	int w = 1; 
@@ -97,6 +99,7 @@ struct RunningShader
 	glm::vec2 lastClickMousePos = {};
 	bool mouseDown = 0;
 	bool mouseClicked = 0;
+	bool focused = 0;
 
 	struct
 	{

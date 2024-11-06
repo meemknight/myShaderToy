@@ -3,11 +3,14 @@
 
 
 bool drawImageButtonWithLabelAndCog(ImTextureID image, 
-	const char *label, const ImVec2 &imageSize, const ImVec2 &cogSize, 
+	const char *label, const ImVec2 &imageSize, 
+	bool &pressedCog, bool &pressedX,
+	const ImVec2 &cogSize, 
 	 const ImVec2 &padding)
 {
 	bool buttonClicked = false;
-	bool cogClicked = false;
+	pressedCog = false;
+	pressedX = false;
 
 	ImGui::BeginGroup();
 
@@ -31,7 +34,14 @@ bool drawImageButtonWithLabelAndCog(ImTextureID image,
 	ImGui::SetCursorPosY(imageStart.y);
 	if (ImGui::Button(ICON_FK_COG, cogSize))
 	{
-		cogClicked = true;
+		pressedCog = true;
+	}
+
+	ImGui::SetCursorPosX(imageEnd.x + padding.x + imageSize.x);
+	ImGui::SetCursorPosY(imageStart.y + cogSize.x + 10);
+	if (ImGui::Button(ICON_FK_TIMES_CIRCLE_O, cogSize))
+	{
+		pressedX = true;
 	}
 
 	ImGui::EndGroup();
