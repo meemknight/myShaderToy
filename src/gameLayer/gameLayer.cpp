@@ -48,6 +48,32 @@ bool gameLogic(float deltaTime)
 
 #pragma endregion
 
+#pragma region web camera
+
+	bool shouldCameraRun = 0;
+
+	for (int i = 0; i < 4; i++)
+	{
+		if (runningShader.inputBuffers[i].t.id == renderer.webCamera.t.id)
+		{
+			shouldCameraRun = true;
+			break;
+		}
+	}
+
+	if (!shouldCameraRun)
+	{
+		renderer.webCamera.deinitCapture();
+	}
+	else
+	{
+		renderer.webCamera.startCapture();
+		renderer.webCamera.doCapture();
+	}
+
+#pragma endregion
+
+
 #pragma region render
 
 	runningShader.updateSize();

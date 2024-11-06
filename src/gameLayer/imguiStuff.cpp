@@ -17,7 +17,7 @@ bool drawImageButtonWithLabelAndCog(ImTextureID image,
 	auto imageStart = ImGui::GetCursorPos();
 
 	// Draw Image Button
-	if (ImGui::ImageButton(image, imageSize))
+	if (ImGui::ImageButton(image, imageSize, {0,1}, {1,0}))
 	{
 		buttonClicked = true;
 	}

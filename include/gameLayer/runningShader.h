@@ -26,6 +26,28 @@ struct Renderer2D
 
 	std::vector<Texture> defaultTextures;
 	gl2d::Texture blackTexture;
+
+	struct WebCamera
+	{
+		int nrCameras = 0;
+
+		std::vector<unsigned char> buffer;
+		std::vector<unsigned char> copyBuffer;
+
+		static constexpr int w = 1280;
+		static constexpr int h = 720;
+
+		bool isCapturing = 0;
+
+		void startCapture();
+
+		void doCapture();
+
+		void deinitCapture();
+
+		gl2d::Texture t;
+
+	}webCamera;
 };
 
 using uniform = GLint;

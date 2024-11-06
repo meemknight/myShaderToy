@@ -7,6 +7,7 @@
 #include <fstream>
 #include <glslGrammar.h>
 #include <imguiStuff.h>
+#include <escapi/escapi.h>
 
 bool RunningShader::init(const char *name)
 {
@@ -209,8 +210,10 @@ void RunningShader::displaySettings(Renderer2D &renderer)
 				{
 					ImGui::NewLine();
 
-					if (ImGui::Button("Misc Button"))
+					if (ImGui::Button("Web Camera"))
 					{
+						inputBuffers[selectedInputBuffer].t = renderer.webCamera.t;
+
 						ImGui::CloseCurrentPopup(); // Close the popup when this button is pressed
 					}
 					ImGui::EndTabItem();
@@ -647,7 +650,8 @@ bool RunningShader::reload()
 
 void RunningShader::bindAndSendUniforms(Renderer2D &renderer)
 {
-	
+
+
 	shader.bind();
 
 	for (int i = 0; i < uniforms.size(); i++)
@@ -798,7 +802,6 @@ void RunningShader::updateSimulation(float deltaTime)
 }
 
 
-
 float data[] = 
 {
 	-1,1,	-1,-1,	1,1,
@@ -818,6 +821,11 @@ void Renderer2D::init()
 	glVertexAttribPointer(0, 2, GL_FLOAT, 0, 0, 0);
 
 	glBindVertexArray(0);
+
+
+	webCamera.nrCameras = setupESCAPI();
+	std::cout << "ESCAPI: " << webCamera.nrCameras << "\n";
+
 }
 
 void Renderer2D::render()
@@ -892,3 +900,71 @@ void Renderer2D::loadDefaultTextures()
 
 }
 
+void Renderer2D::WebCamera::startCapture()
+{
+	if (isCapturing) { return; }
+
+	buffer.resize(w * h * 4);
+
+	if (!t.id)
+	{
+		t.create1PxSquare();
+	}
+
+	SimpleCapParams params = {};
+	params.mTargetBuf = (int*)buffer.data();
+	params.mWidth = w;
+	params.mHeight = h;
+
+	if (initCapture(0, &params)) 
+	{
+
+		isCapturing = true;
+
+		//std::cout << "Started! CAPTURE!";
+	
+	}
+	else
+	{
+		isCapturing = false;
+		//std::cout << "Coultnd start :(((";
+	}
+
+
+}
+
+void Renderer2D::WebCamera::doCapture()
+{
+	if (!isCapturing)return;
+
+	int hardCounter = 0;
+	::doCapture(0); while (isCaptureDone(0) == 0) {};
+
+	copyBuffer.resize(buffer.size());
+
+	for (int y = 0; y < h; y++)
+	{
+		for (int x = 0; x < w; x++)
+		{
+			copyBuffer[(x + y * w) * 4 + 0] = buffer[(x + (h - y - 1) * w) * 4 + 0];
+			copyBuffer[(x + y * w) * 4 + 1] = buffer[(x + (h - y - 1) * w) * 4 + 1];
+			copyBuffer[(x + y * w) * 4 + 2] = buffer[(x + (h - y - 1) * w) * 4 + 2];
+			copyBuffer[(x + y * w) * 4 + 3] = 255;
+		}
+	}
+
+	t.bind(5);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, copyBuffer.data());
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+}
+
+void Renderer2D::WebCamera::deinitCapture()
+{
+	if (isCapturing)
+	{
+		::deinitCapture(0);
+		isCapturing = 0;
+	}
+
+}
