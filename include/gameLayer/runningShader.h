@@ -6,6 +6,7 @@
 #include <TextEditor.h>
 #include <filesystem>
 #include <vector>
+#include <imfilebrowser.h>
 
 struct Renderer2D
 {
@@ -75,12 +76,17 @@ struct ShaderInputBuffer
 	//todo settings
 };
 
-struct RunningShader
+
+struct RunningShader;
+
+
+struct ShaderComponent
 {
+	char name[300] = {};
+	ImGui::FileBrowser fileDialogue;
 
 	Shader shader;
 	gl2d::FrameBuffer frameBuffer;
-	std::string name;
 	std::vector<Uniform> uniforms;
 	TextEditor textEditor;
 
@@ -88,40 +94,9 @@ struct RunningShader
 	bool inputSelectorOpen = 0;
 	ShaderInputBuffer inputBuffers[4];
 
-	int w = 1; 
-	int h = 1;
-
-	bool init(const char *name);
-
-	void updateSize();
-
-	void displayImgui(Renderer2D &renderer);
-
-	void displaySettings(Renderer2D &renderer);
-
-	void displayPreview();
-
 	bool reload();
 
-	void updateSimulation(float deltaTime);
-
-	void bindAndSendUniforms(Renderer2D &renderer);
-
-	float accumulatedTime = 0;
-	float deltaTime = 0;
-
-	int countedFrameRate = 0;
-	int currentFrameRate = 0;
-	float countedSeccond = 0;
-	int frameNumber = 0;
-
-	glm::vec2 currentMousePos = {};
-
-	glm::vec2 lastDownMousePos = {};
-	glm::vec2 lastClickMousePos = {};
-	bool mouseDown = 0;
-	bool mouseClicked = 0;
-	bool focused = 0;
+	void bindAndSendUniforms(Renderer2D &renderer, RunningShader &runningShader);
 
 	struct
 	{
@@ -142,5 +117,47 @@ struct RunningShader
 
 
 	}specialUniforms;
+};
+
+struct RunningShader
+{
+
+	ShaderComponent mainShader;
+
+	ShaderComponent shaderBuffers[4];
+
+
+	bool init(const char *name);
+
+	void updateSize();
+
+	void displayImgui(Renderer2D &renderer);
+
+	void displaySettings(Renderer2D &renderer);
+
+	void displayPreview();
+
+	void updateSimulation(float deltaTime);
+
+	int w = 1;
+	int h = 1;
+
+	float accumulatedTime = 0;
+	float deltaTime = 0;
+
+	int countedFrameRate = 0;
+	int currentFrameRate = 0;
+	float countedSeccond = 0;
+	int frameNumber = 0;
+
+	glm::vec2 currentMousePos = {};
+
+	glm::vec2 lastDownMousePos = {};
+	glm::vec2 lastClickMousePos = {};
+	bool mouseDown = 0;
+	bool mouseClicked = 0;
+	bool focused = 0;
+
+
 
 };

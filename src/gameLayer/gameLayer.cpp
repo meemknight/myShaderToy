@@ -22,7 +22,7 @@ bool initGame()
 	gl2d::init();
 
 
-	runningShader.init(RESOURCES_PATH "test");
+	runningShader.init(RESOURCES_PATH "test.frag");
 	renderer.init();
 	renderer.loadDefaultTextures();
 
@@ -54,7 +54,17 @@ bool gameLogic(float deltaTime)
 
 	for (int i = 0; i < 4; i++)
 	{
-		if (runningShader.inputBuffers[i].t.id == renderer.webCamera.t.id)
+		if (runningShader.mainShader.inputBuffers[i].t.id == renderer.webCamera.t.id)
+		{
+			shouldCameraRun = true;
+			break;
+		}
+	}
+
+	for (int j = 0; j < 4; j++)
+	for (int i = 0; i < 4; i++)
+	{
+		if (runningShader.shaderBuffers[j].inputBuffers[i].t.id == renderer.webCamera.t.id)
 		{
 			shouldCameraRun = true;
 			break;
@@ -79,12 +89,26 @@ bool gameLogic(float deltaTime)
 	runningShader.updateSize();
 	runningShader.updateSimulation(deltaTime);
 
-	runningShader.bindAndSendUniforms(renderer);
+	for (int i = 0; i < 4; i++)
+	{
+		auto &b = runningShader.shaderBuffers[i];
 
-	glBindFramebuffer(GL_FRAMEBUFFER, runningShader.frameBuffer.fbo);
+		if (b.shader.id)
+		{
+			b.bindAndSendUniforms(renderer, runningShader);
+			glBindFramebuffer(GL_FRAMEBUFFER, b.frameBuffer.fbo);
+			glViewport(0, 0, runningShader.w, runningShader.h);
+			renderer.render();
+		};
+
+	}
+
+	runningShader.mainShader.bindAndSendUniforms(renderer, runningShader);
+	glBindFramebuffer(GL_FRAMEBUFFER, runningShader.mainShader.frameBuffer.fbo);
 	glViewport(0, 0, runningShader.w, runningShader.h);
-
 	renderer.render();
+
+
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 

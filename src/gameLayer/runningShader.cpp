@@ -8,23 +8,34 @@
 #include <glslGrammar.h>
 #include <imguiStuff.h>
 #include <escapi/escapi.h>
+#include <IconsForkAwesome.h>
 
 bool RunningShader::init(const char *name)
 {
 
-	this->name = name;
+	strncpy(this->mainShader.name, name, sizeof(this->mainShader.name));
 
-	
-	frameBuffer.create(1, 1);
+	mainShader.frameBuffer.create(1, 1);
 
-	return reload();
+	for (int i = 0; i < 4; i++)
+	{
+		shaderBuffers[i].frameBuffer.create(1, 1);
+	}
+
+	return mainShader.reload();
 
 }
 
 void RunningShader::updateSize()
 {
-	frameBuffer.resize(w, h);
-	frameBuffer.clear();
+	mainShader.frameBuffer.resize(w, h);
+	mainShader.frameBuffer.clear();
+
+	for (int i = 0; i < 4; i++)
+	{
+		shaderBuffers[i].frameBuffer.resize(w, h);
+		shaderBuffers[i].frameBuffer.clear();
+	}
 }
 
 
@@ -35,248 +46,373 @@ void RunningShader::displayImgui(Renderer2D &renderer)
 
 	displaySettings(renderer);
 
-	std::string textEditorName = this->name + " edit";
+	std::string textEditorName = std::string(this->mainShader.name) + " edit";
 	ImGui::Begin(textEditorName.c_str());
-	textEditor.Render(textEditorName.c_str());
+	mainShader.textEditor.Render(textEditorName.c_str());
 	ImGui::End();
 }
 
 void RunningShader::displaySettings(Renderer2D &renderer)
 {
-	std::string windowName = name + " settings";
+	std::string windowName = std::string(mainShader.name) + " settings";
 
 	ImGui::Begin(windowName.c_str());
 
-	ImGui::Text("Uniforms: ");
-	ImGui::Separator();
-	ImGui::NewLine();
 
-	for (int i = 0; i < uniforms.size(); i++)
-	{
-		auto &u = uniforms[i];
-
-		if (u.type == GL_FLOAT)
-		{
-			ImGui::DragFloat(u.name.c_str(), &u.data.vec4[0]);
-		}
-		else if (u.type == GL_FLOAT_VEC2)
-		{
-			ImGui::DragFloat2(u.name.c_str(), &u.data.vec4[0]);
-		}
-		else if (u.type == GL_FLOAT_VEC3)
-		{
-			//ImGui::DragFloat3(u.name.c_str(), &u.data.vec4[0]);
-			ImGui::ColorEdit3(u.name.c_str(), &u.data.vec4[0]);
-		}else if (u.type == GL_FLOAT_VEC4)
-		{
-			//ImGui::DragFloat4(u.name.c_str(), &u.data.vec4[0]);
-			ImGui::ColorEdit4(u.name.c_str(), &u.data.vec4[0]);
-		}
-
-		else if (u.type == GL_INT)
-		{
-			ImGui::DragInt(u.name.c_str(), &u.data.ivec4[0]);
-		}
-		else if (u.type == GL_INT_VEC2)
-		{
-			ImGui::DragInt2(u.name.c_str(), &u.data.ivec4[0]);
-		}
-		else if (u.type == GL_INT_VEC3)
-		{
-			ImGui::DragInt3(u.name.c_str(), &u.data.ivec4[0]);
-		}
-		else if (u.type == GL_INT_VEC4)
-		{
-			ImGui::DragInt4(u.name.c_str(), &u.data.ivec4[0]);
-		}
-
-		else if (u.type == GL_UNSIGNED_INT)
-		{
-			ImGui::DragScalar(u.name.c_str(), ImGuiDataType_U32, &u.data.uvec4[0]);
-		}
-		else if (u.type == GL_UNSIGNED_INT_VEC2)
-		{
-			ImGui::DragScalarN(u.name.c_str(), ImGuiDataType_U32, &u.data.uvec4[0], 2);
-		}
-		else if (u.type == GL_UNSIGNED_INT_VEC3)
-		{
-			ImGui::DragScalarN(u.name.c_str(), ImGuiDataType_U32, &u.data.uvec4[0], 3);
-		}
-		else if (u.type == GL_UNSIGNED_INT_VEC4)
-		{
-			ImGui::DragScalarN(u.name.c_str(), ImGuiDataType_U32, &u.data.uvec4[0], 4);
-		}
-
-		else if (u.type == GL_BOOL)
-		{
-			ImGui::Checkbox(u.name.c_str(), (bool *)&u.data.ivec4[0]);
-		}
-		else if (u.type == GL_BOOL_VEC2)
-		{
-			ImGui::Checkbox(("##bool2" + u.name).c_str(), (bool *)&u.data.ivec4[0]);
-			ImGui::SameLine();
-			ImGui::Checkbox(u.name.c_str(), (bool *)&u.data.ivec4[1]);
-		}
-		else if (u.type == GL_BOOL_VEC3)
-		{
-			ImGui::Checkbox(("##bool3" + u.name).c_str(), (bool *)&u.data.ivec4[0]);
-			ImGui::SameLine(); ImGui::Checkbox(("##bool2" + u.name).c_str(), (bool *)&u.data.ivec4[1]);
-			ImGui::SameLine(); ImGui::Checkbox(u.name.c_str(), (bool *)&u.data.ivec4[2]);
-		}
-		else if (u.type == GL_BOOL_VEC4)
-		{
-			ImGui::Checkbox(("##bool4" + u.name).c_str(), (bool *)&u.data.ivec4[0]);
-			ImGui::SameLine(); ImGui::Checkbox(("##bool2" + u.name).c_str(), (bool *)&u.data.ivec4[1]);
-			ImGui::SameLine(); ImGui::Checkbox(("##bool3" + u.name).c_str(), (bool *)&u.data.ivec4[2]);
-			ImGui::SameLine(); ImGui::Checkbox(u.name.c_str(), (bool *)&u.data.ivec4[3]);
-		}
-
-	}
-
-	ImGui::Separator();
-	ImGui::NewLine();
-
-
-	ImGui::Text("Buffers: ");
-
-	//if()
-	for (int i = 0; i < 4; i++)
-	{
-		auto b = &inputBuffers[i];
-
-		if (b->t.id == 0)
-		{
-			b->t.id = renderer.blackTexture.id;
-		}
-	}
-
-	if (renderer.defaultTextures.size())
+	auto displayShader = [&](ShaderComponent &shaderBuffer)
 	{
 
-		auto drawButton = [&](int index)
+			
+		if (ImGui::Button(ICON_FK_FOLDER_OPEN_O))
+		{
+			shaderBuffer.fileDialogue.SetTitle("Select shader");
+			shaderBuffer.fileDialogue.SetTypeFilters({".frag", ".vert", ".glsl", ".txt", ".*"});
+			shaderBuffer.fileDialogue.SetPwd(RESOURCES_PATH);
+		
+			shaderBuffer.fileDialogue.Open();
+
+		}
+		
+		ImGui::SameLine();
+
+		if (ImGui::Button(ICON_FK_REPEAT))
+		{
+			shaderBuffer.reload();
+		}
+		
+		ImGui::SameLine();
+		ImGui::InputText("##input text file", shaderBuffer.name, sizeof(shaderBuffer.name));
+		
+		shaderBuffer.fileDialogue.Display();
+		
+		if (shaderBuffer.fileDialogue.HasSelected())
+		{
+			strncpy(shaderBuffer.name, shaderBuffer.fileDialogue.GetSelected().string().c_str(), sizeof(shaderBuffer.name));
+			shaderBuffer.fileDialogue.ClearSelected();
+		
+			shaderBuffer.reload();
+		}
+
+		if (!shaderBuffer.shader.id)
+		{
+			return;
+		}
+
+		ImGui::Text("Uniforms: ");
+		ImGui::Separator();
+		ImGui::NewLine();
+
+		for (int i = 0; i < shaderBuffer.uniforms.size(); i++)
+		{
+			auto &u = shaderBuffer.uniforms[i];
+
+			if (u.type == GL_FLOAT)
+			{
+				ImGui::DragFloat(u.name.c_str(), &u.data.vec4[0]);
+			}
+			else if (u.type == GL_FLOAT_VEC2)
+			{
+				ImGui::DragFloat2(u.name.c_str(), &u.data.vec4[0]);
+			}
+			else if (u.type == GL_FLOAT_VEC3)
+			{
+				//ImGui::DragFloat3(u.name.c_str(), &u.data.vec4[0]);
+				ImGui::ColorEdit3(u.name.c_str(), &u.data.vec4[0]);
+			}
+			else if (u.type == GL_FLOAT_VEC4)
+			{
+				//ImGui::DragFloat4(u.name.c_str(), &u.data.vec4[0]);
+				ImGui::ColorEdit4(u.name.c_str(), &u.data.vec4[0]);
+			}
+
+			else if (u.type == GL_INT)
+			{
+				ImGui::DragInt(u.name.c_str(), &u.data.ivec4[0]);
+			}
+			else if (u.type == GL_INT_VEC2)
+			{
+				ImGui::DragInt2(u.name.c_str(), &u.data.ivec4[0]);
+			}
+			else if (u.type == GL_INT_VEC3)
+			{
+				ImGui::DragInt3(u.name.c_str(), &u.data.ivec4[0]);
+			}
+			else if (u.type == GL_INT_VEC4)
+			{
+				ImGui::DragInt4(u.name.c_str(), &u.data.ivec4[0]);
+			}
+
+			else if (u.type == GL_UNSIGNED_INT)
+			{
+				ImGui::DragScalar(u.name.c_str(), ImGuiDataType_U32, &u.data.uvec4[0]);
+			}
+			else if (u.type == GL_UNSIGNED_INT_VEC2)
+			{
+				ImGui::DragScalarN(u.name.c_str(), ImGuiDataType_U32, &u.data.uvec4[0], 2);
+			}
+			else if (u.type == GL_UNSIGNED_INT_VEC3)
+			{
+				ImGui::DragScalarN(u.name.c_str(), ImGuiDataType_U32, &u.data.uvec4[0], 3);
+			}
+			else if (u.type == GL_UNSIGNED_INT_VEC4)
+			{
+				ImGui::DragScalarN(u.name.c_str(), ImGuiDataType_U32, &u.data.uvec4[0], 4);
+			}
+
+			else if (u.type == GL_BOOL)
+			{
+				ImGui::Checkbox(u.name.c_str(), (bool *)&u.data.ivec4[0]);
+			}
+			else if (u.type == GL_BOOL_VEC2)
+			{
+				ImGui::Checkbox(("##bool2" + u.name).c_str(), (bool *)&u.data.ivec4[0]);
+				ImGui::SameLine();
+				ImGui::Checkbox(u.name.c_str(), (bool *)&u.data.ivec4[1]);
+			}
+			else if (u.type == GL_BOOL_VEC3)
+			{
+				ImGui::Checkbox(("##bool3" + u.name).c_str(), (bool *)&u.data.ivec4[0]);
+				ImGui::SameLine(); ImGui::Checkbox(("##bool2" + u.name).c_str(), (bool *)&u.data.ivec4[1]);
+				ImGui::SameLine(); ImGui::Checkbox(u.name.c_str(), (bool *)&u.data.ivec4[2]);
+			}
+			else if (u.type == GL_BOOL_VEC4)
+			{
+				ImGui::Checkbox(("##bool4" + u.name).c_str(), (bool *)&u.data.ivec4[0]);
+				ImGui::SameLine(); ImGui::Checkbox(("##bool2" + u.name).c_str(), (bool *)&u.data.ivec4[1]);
+				ImGui::SameLine(); ImGui::Checkbox(("##bool3" + u.name).c_str(), (bool *)&u.data.ivec4[2]);
+				ImGui::SameLine(); ImGui::Checkbox(u.name.c_str(), (bool *)&u.data.ivec4[3]);
+			}
+
+		}
+
+		ImGui::Separator();
+		ImGui::NewLine();
+
+
+		ImGui::Text("Buffers: ");
+
+		//if()
+		for (int i = 0; i < 4; i++)
+		{
+			auto b = &shaderBuffer.inputBuffers[i];
+
+			if (b->t.id == 0)
+			{
+				b->t.id = renderer.blackTexture.id;
+			}
+		}
+
+		if (renderer.defaultTextures.size())
 		{
 
-			auto id = inputBuffers[index].t.id;
+			auto drawButton = [&](int index)
+			{
 
-			if (!id) { id = renderer.blackTexture.id; }
+				auto id = shaderBuffer.inputBuffers[index].t.id;
 
-			const char *names[4] = {
-				"iChannel0",
-				"iChannel1",
-				"iChannel2",
-				"iChannel3"
+				if (!id) { id = renderer.blackTexture.id; }
+
+				const char *names[4] = {
+					"iChannel0",
+					"iChannel1",
+					"iChannel2",
+					"iChannel3"
+				};
+
+				bool pressedCog = 0;
+				bool pressedX = 0;
+
+				if (drawImageButtonWithLabelAndCog((ImTextureID)id,
+					names[index], {140, 140}, pressedCog, pressedX
+					))
+				{
+					shaderBuffer.selectedInputBuffer = index;
+					shaderBuffer.inputSelectorOpen = true;
+					ImGui::OpenPopup("Select Input Popup");
+				}
+
+				if (pressedX)
+				{
+					shaderBuffer.inputBuffers[index].t.id = renderer.blackTexture.id;
+				}
+
 			};
 
-			bool pressedCog = 0;
-			bool pressedX = 0;
+			drawButton(0);
+			ImGui::SameLine();
+			drawButton(1);
+			ImGui::SameLine();
+			drawButton(2);
+			ImGui::SameLine();
+			drawButton(3);
 
-			if (drawImageButtonWithLabelAndCog((ImTextureID)id,
-				names[index], {140, 140}, pressedCog, pressedX
-				))
-			{
-				selectedInputBuffer = index;
-				inputSelectorOpen = true;
-				ImGui::OpenPopup("Select Input Popup");
-			}
+			//ImGui::SetNextWindowSize(ImVec2(400, 300));
 
-			if (pressedX)
-			{
-				inputBuffers[index].t.id = renderer.blackTexture.id;
-			}
-
-		};
-		
-		drawButton(0);
-		ImGui::SameLine();
-		drawButton(1);
-		ImGui::SameLine();
-		drawButton(2);
-		ImGui::SameLine();
-		drawButton(3);
-
-		//ImGui::SetNextWindowSize(ImVec2(400, 300));
-
-		if (ImGui::BeginPopupModal("Select Input Popup", &inputSelectorOpen))
-		{
-
-			if (!inputSelectorOpen) { ImGui::CloseCurrentPopup(); }
-
-			// Begin vertical tab bar
-			if (ImGui::BeginTabBar("TabBar"))
+			if (ImGui::BeginPopupModal("Select Input Popup", &shaderBuffer.inputSelectorOpen))
 			{
 
-				// "Misc" tab
-				if (ImGui::BeginTabItem("Misc"))
+				if (!shaderBuffer.inputSelectorOpen) { ImGui::CloseCurrentPopup(); }
+
+				// Begin vertical tab bar
+				if (ImGui::BeginTabBar("TabBar"))
 				{
-					ImGui::NewLine();
 
-					if (ImGui::Button("Web Camera"))
+					// "Misc" tab
+					if (ImGui::BeginTabItem("Misc"))
 					{
-						inputBuffers[selectedInputBuffer].t = renderer.webCamera.t;
+						ImGui::NewLine();
 
-						ImGui::CloseCurrentPopup(); // Close the popup when this button is pressed
-					}
-					ImGui::EndTabItem();
-				}
-
-				// "Textures" tab
-				if (ImGui::BeginTabItem("Textures"))
-				{
-					ImGui::NewLine();
-
-					for (int i = 0; i < renderer.defaultTextures.size(); i++)
-					{
-
-						if (ImGui::ImageButton((void *)renderer.defaultTextures[i].t.id,
-							{140, 140}, {0,1}, {1,0}
-							))
+						if (ImGui::Button("Web Camera"))
 						{
-							inputBuffers[selectedInputBuffer].t = renderer.defaultTextures[i].t;
+							shaderBuffer.inputBuffers[shaderBuffer.selectedInputBuffer].t = renderer.webCamera.t;
+							ImGui::CloseCurrentPopup(); // Close the popup when this button is pressed
+						}
+
+						ImGui::SameLine();
+
+						if (ImGui::Button("Buffer A"))
+						{
+							shaderBuffer.inputBuffers[shaderBuffer.selectedInputBuffer].t = 
+								shaderBuffers[0].frameBuffer.texture;
+							ImGui::CloseCurrentPopup(); // Close the popup when this button is pressed
+						}
+
+						ImGui::SameLine();
+
+						if (ImGui::Button("Buffer B"))
+						{
+							shaderBuffer.inputBuffers[shaderBuffer.selectedInputBuffer].t =
+								shaderBuffers[1].frameBuffer.texture;
+							ImGui::CloseCurrentPopup(); // Close the popup when this button is pressed
+						}
+
+						ImGui::SameLine();
+
+						if (ImGui::Button("Buffer C"))
+						{
+							shaderBuffer.inputBuffers[shaderBuffer.selectedInputBuffer].t =
+								shaderBuffers[2].frameBuffer.texture;
+							ImGui::CloseCurrentPopup(); // Close the popup when this button is pressed
+						}
+
+						if (ImGui::Button("Buffer D"))
+						{
+							shaderBuffer.inputBuffers[shaderBuffer.selectedInputBuffer].t =
+								shaderBuffers[3].frameBuffer.texture;
+							ImGui::CloseCurrentPopup(); // Close the popup when this button is pressed
+						}
+
+
+						ImGui::EndTabItem();
+					}
+
+					// "Textures" tab
+					if (ImGui::BeginTabItem("Textures"))
+					{
+						ImGui::NewLine();
+
+						for (int i = 0; i < renderer.defaultTextures.size(); i++)
+						{
+
+							if (ImGui::ImageButton((void *)renderer.defaultTextures[i].t.id,
+								{140, 140}, {0,1}, {1,0}
+								))
+							{
+								shaderBuffer.inputBuffers[shaderBuffer.selectedInputBuffer].t = renderer.defaultTextures[i].t;
+								ImGui::CloseCurrentPopup();
+							}
+
+							if (!(i % 4 == 3))
+							{
+								ImGui::SameLine();
+							}
+
+						}
+
+						ImGui::EndTabItem();
+					}
+
+					// "Cubemaps" tab
+					if (ImGui::BeginTabItem("Cubemaps"))
+					{
+						ImGui::NewLine();
+
+						if (ImGui::Button("Cubemaps Button"))
+						{
 							ImGui::CloseCurrentPopup();
 						}
+						ImGui::EndTabItem();
+					}
 
-						if (!(i % 4 == 3))
+					// "Volumes" tab
+					if (ImGui::BeginTabItem("Volumes"))
+					{
+						ImGui::NewLine();
+
+						if (ImGui::Button("Volumes Button"))
 						{
-							ImGui::SameLine();
+							ImGui::CloseCurrentPopup();
 						}
-
+						ImGui::EndTabItem();
 					}
-					
-					ImGui::EndTabItem();
+
+					ImGui::EndTabBar();
 				}
 
-				// "Cubemaps" tab
-				if (ImGui::BeginTabItem("Cubemaps"))
-				{
-					ImGui::NewLine();
 
-					if (ImGui::Button("Cubemaps Button"))
-					{
-						ImGui::CloseCurrentPopup();
-					}
-					ImGui::EndTabItem();
-				}
-
-				// "Volumes" tab
-				if (ImGui::BeginTabItem("Volumes"))
-				{
-					ImGui::NewLine();
-					
-					if (ImGui::Button("Volumes Button"))
-					{
-						ImGui::CloseCurrentPopup();
-					}
-					ImGui::EndTabItem();
-				}
-
-				ImGui::EndTabBar();
+				ImGui::EndPopup();
 			}
 
+		}
+	};
 
-			ImGui::EndPopup();
+
+	// Begin vertical tab bar
+	if (ImGui::BeginTabBar("Select Shader Tab"))
+	{
+
+
+		if (ImGui::BeginTabItem("Image"))
+		{
+			ImGui::NewLine();
+				displayShader(mainShader);
+			ImGui::EndTabItem();
 		}
 
+
+		if (ImGui::BeginTabItem("Buffer A"))
+		{
+			ImGui::NewLine();
+			displayShader(shaderBuffers[0]);
+			ImGui::EndTabItem();
+		}
+
+		if (ImGui::BeginTabItem("Buffer B"))
+		{
+			ImGui::NewLine();
+			displayShader(shaderBuffers[1]);
+			ImGui::EndTabItem();
+		}
+
+		if (ImGui::BeginTabItem("Buffer C"))
+		{
+			ImGui::NewLine();
+			displayShader(shaderBuffers[2]);
+			ImGui::EndTabItem();
+		}
+
+		if (ImGui::BeginTabItem("Buffer D"))
+		{
+			ImGui::NewLine();
+			displayShader(shaderBuffers[3]);
+			ImGui::EndTabItem();
+		}
+
+
+		ImGui::EndTabBar();
 	}
+
+
 
 
 
@@ -285,7 +421,7 @@ void RunningShader::displaySettings(Renderer2D &renderer)
 
 void RunningShader::displayPreview()
 {
-	std::string resultWindowName = name + " view";
+	std::string resultWindowName = std::string(mainShader.name) + " view";
 
 	bool isOpen = 1;
 
@@ -354,7 +490,7 @@ void RunningShader::displayPreview()
 	ImVec2 pos = ImGui::GetCursorScreenPos();
 	ImVec2 maxPos = {ImGui::GetWindowPos().x + ImGui::GetWindowSize().x,
 		ImGui::GetWindowPos().y + ImGui::GetWindowSize().y};
-	unsigned int texId = frameBuffer.texture.id;
+	unsigned int texId = mainShader.frameBuffer.texture.id;
 
 	ImGui::GetWindowDrawList()->AddImage(
 		(void *)texId,
@@ -405,7 +541,7 @@ std::string readFileToString(const char *filePath)
 	return content;
 }
 
-bool RunningShader::reload()
+bool ShaderComponent::reload()
 {
 	uniforms.clear();
 	specialUniforms = {};
@@ -415,9 +551,10 @@ bool RunningShader::reload()
 
 	//get the data.
 	{
-		std::string vertexData = readFileToString((this->name + ".vert").c_str());
-		std::string fragmentData = readFileToString((this->name + ".frag").c_str());
+		std::string vertexData = readFileToString(RESOURCES_PATH "default.vert");
+		std::string fragmentData = readFileToString((std::string(this->name)).c_str());
 
+		//todo error couldn't load files and stuff
 
 		auto rez = tokenizeGLSL(fragmentData.c_str());
 
@@ -548,8 +685,6 @@ bool RunningShader::reload()
 			newFragment = newFragmentStart + newFragment;
 		}
 
-
-
 		shader.loadShaderProgramFromData(
 			vertexData.c_str(), newFragment.c_str()
 		);
@@ -566,11 +701,12 @@ bool RunningShader::reload()
 	//text editor
 	{
 		std::ifstream file;
-		file.open(this->name + ".frag");
+		file.open(std::string(this->name));
 
 		if (!file.is_open())
 		{
 			std::cout << "Error openning file: " << this->name << "\n";
+			shader.clear();
 			return 0;
 		}
 
@@ -648,7 +784,7 @@ bool RunningShader::reload()
 	return true;
 }
 
-void RunningShader::bindAndSendUniforms(Renderer2D &renderer)
+void ShaderComponent::bindAndSendUniforms(Renderer2D &renderer, RunningShader &runningShader)
 {
 
 
@@ -729,16 +865,16 @@ void RunningShader::bindAndSendUniforms(Renderer2D &renderer)
 	}
 
 	//special uniforms
-	glUniform3f(specialUniforms.iResolution, w, h, 0);
-	glUniform1f(specialUniforms.iTime, accumulatedTime);
-	glUniform1f(specialUniforms.iTimeDelta, deltaTime);
-	glUniform1f(specialUniforms.iFrameRate, (float)currentFrameRate);
-	glUniform1i(specialUniforms.iFrame, frameNumber);
+	glUniform3f(specialUniforms.iResolution, runningShader.w, runningShader.h, 0);
+	glUniform1f(specialUniforms.iTime, runningShader.accumulatedTime);
+	glUniform1f(specialUniforms.iTimeDelta, runningShader.deltaTime);
+	glUniform1f(specialUniforms.iFrameRate, (float)runningShader.currentFrameRate);
+	glUniform1i(specialUniforms.iFrame, runningShader.frameNumber);
 
-	glm::vec4 mouseInput = {lastDownMousePos, lastClickMousePos};
+	glm::vec4 mouseInput = {runningShader.lastDownMousePos, runningShader.lastClickMousePos};
 
-	if (!mouseDown || !focused) { mouseInput.z *= -1; }
-	if (!mouseClicked || !focused) { mouseInput.w *= -1; }
+	if (!runningShader.mouseDown || !runningShader.focused) { mouseInput.z *= -1; }
+	if (!runningShader.mouseClicked || !runningShader.focused) { mouseInput.w *= -1; }
 
 	glUniform4f(specialUniforms.iMouse, mouseInput.x, mouseInput.y, mouseInput.z, mouseInput.w); //todo
 
