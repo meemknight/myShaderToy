@@ -29,12 +29,12 @@ bool RunningShader::init(const char *name)
 void RunningShader::updateSize()
 {
 	mainShader.frameBuffer.resize(w, h);
-	mainShader.frameBuffer.clear();
+	//mainShader.frameBuffer.clear();
 
 	for (int i = 0; i < 4; i++)
 	{
 		shaderBuffers[i].frameBuffer.resize(w, h);
-		shaderBuffers[i].frameBuffer.clear();
+		//shaderBuffers[i].frameBuffer.clear();
 	}
 }
 
@@ -46,7 +46,8 @@ void RunningShader::displayImgui(Renderer2D &renderer)
 
 	displaySettings(renderer);
 
-	std::string textEditorName = std::string(this->mainShader.name) + " edit";
+	//std::string textEditorName = std::string(this->mainShader.name) + " edit";
+	std::string textEditorName = "Code Editor";
 	ImGui::Begin(textEditorName.c_str());
 	mainShader.textEditor.Render(textEditorName.c_str());
 	ImGui::End();
@@ -54,7 +55,8 @@ void RunningShader::displayImgui(Renderer2D &renderer)
 
 void RunningShader::displaySettings(Renderer2D &renderer)
 {
-	std::string windowName = std::string(mainShader.name) + " settings";
+	//std::string windowName = std::string(mainShader.name) + " settings";
+	std::string windowName = "Settings";
 
 	ImGui::Begin(windowName.c_str());
 
@@ -207,6 +209,9 @@ void RunningShader::displaySettings(Renderer2D &renderer)
 
 			auto drawButton = [&](int index)
 			{
+				bool ret = 0;
+
+				ImGui::PushID(index + 100);
 
 				auto id = shaderBuffer.inputBuffers[index].t.id;
 
@@ -226,9 +231,8 @@ void RunningShader::displaySettings(Renderer2D &renderer)
 					names[index], {140, 140}, pressedCog, pressedX
 					))
 				{
-					shaderBuffer.selectedInputBuffer = index;
-					shaderBuffer.inputSelectorOpen = true;
-					ImGui::OpenPopup("Select Input Popup");
+					ret = true;
+					
 				}
 
 				if (pressedX)
@@ -236,15 +240,38 @@ void RunningShader::displaySettings(Renderer2D &renderer)
 					shaderBuffer.inputBuffers[index].t.id = renderer.blackTexture.id;
 				}
 
+				ImGui::PopID();
+
+				return ret;
 			};
 
-			drawButton(0);
+			if(drawButton(0))
+			{
+				shaderBuffer.selectedInputBuffer = 0;
+				shaderBuffer.inputSelectorOpen = true;
+				ImGui::OpenPopup("Select Input Popup");
+			}
 			ImGui::SameLine();
-			drawButton(1);
+			if (drawButton(1))
+			{
+				shaderBuffer.selectedInputBuffer = 1;
+				shaderBuffer.inputSelectorOpen = true;
+				ImGui::OpenPopup("Select Input Popup");
+			}
 			ImGui::SameLine();
-			drawButton(2);
+			if (drawButton(2))
+			{
+				shaderBuffer.selectedInputBuffer = 2;
+				shaderBuffer.inputSelectorOpen = true;
+				ImGui::OpenPopup("Select Input Popup");
+			}
 			ImGui::SameLine();
-			drawButton(3);
+			if (drawButton(3))
+			{
+				shaderBuffer.selectedInputBuffer = 3;
+				shaderBuffer.inputSelectorOpen = true;
+				ImGui::OpenPopup("Select Input Popup");
+			}
 
 			//ImGui::SetNextWindowSize(ImVec2(400, 300));
 
@@ -366,7 +393,6 @@ void RunningShader::displaySettings(Renderer2D &renderer)
 		}
 	};
 
-
 	// Begin vertical tab bar
 	if (ImGui::BeginTabBar("Select Shader Tab"))
 	{
@@ -375,7 +401,9 @@ void RunningShader::displaySettings(Renderer2D &renderer)
 		if (ImGui::BeginTabItem("Image"))
 		{
 			ImGui::NewLine();
+			ImGui::PushID(10);
 				displayShader(mainShader);
+			ImGui::PopID();
 			ImGui::EndTabItem();
 		}
 
@@ -383,28 +411,36 @@ void RunningShader::displaySettings(Renderer2D &renderer)
 		if (ImGui::BeginTabItem("Buffer A"))
 		{
 			ImGui::NewLine();
-			displayShader(shaderBuffers[0]);
+			ImGui::PushID(11);
+				displayShader(shaderBuffers[0]);
+			ImGui::PopID();
 			ImGui::EndTabItem();
 		}
 
 		if (ImGui::BeginTabItem("Buffer B"))
 		{
 			ImGui::NewLine();
+			ImGui::PushID(12);
 			displayShader(shaderBuffers[1]);
+			ImGui::PopID();
 			ImGui::EndTabItem();
 		}
 
 		if (ImGui::BeginTabItem("Buffer C"))
 		{
 			ImGui::NewLine();
+			ImGui::PushID(13);
 			displayShader(shaderBuffers[2]);
+			ImGui::PopID();
 			ImGui::EndTabItem();
 		}
 
 		if (ImGui::BeginTabItem("Buffer D"))
 		{
 			ImGui::NewLine();
+			ImGui::PushID(14);
 			displayShader(shaderBuffers[3]);
+			ImGui::PopID();
 			ImGui::EndTabItem();
 		}
 
@@ -421,7 +457,8 @@ void RunningShader::displaySettings(Renderer2D &renderer)
 
 void RunningShader::displayPreview()
 {
-	std::string resultWindowName = std::string(mainShader.name) + " view";
+	//std::string resultWindowName = std::string(mainShader.name) + " view";
+	std::string resultWindowName = "Preview";
 
 	bool isOpen = 1;
 
