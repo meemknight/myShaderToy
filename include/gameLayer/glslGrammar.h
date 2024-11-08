@@ -18,6 +18,13 @@ struct Token
 
 };
 
+struct UniformEntry
+{
+	std::string name;
+	int type = 0;
+	bool asColor = 0;
+};
+
 
 std::vector<Token> tokenizeGLSL(const char *text);
 
@@ -28,3 +35,5 @@ bool hasMainFunction(std::vector<Token> &tokens, const char *text);
 bool hasMainColorOutput(std::vector<Token> &tokens, const char *text, std::string *name = 0, int *type = 0);
 
 bool hasUniform(std::vector<Token> &tokens, const char *text, const char* name, const char* type);
+
+std::vector<UniformEntry> getUniforms(std::vector<Token> &tokens, const char *text);

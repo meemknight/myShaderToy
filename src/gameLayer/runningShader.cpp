@@ -180,15 +180,25 @@ void RunningShader::displaySettings(Renderer2D &renderer)
 			}
 			else if (u.type == GL_FLOAT_VEC3)
 			{
-				//ImGui::DragFloat3(u.name.c_str(), &u.data.vec4[0]);
-				ImGui::ColorEdit3(u.name.c_str(), &u.data.vec4[0]);
+				if (u.asColor)
+				{
+					ImGui::ColorEdit3(u.name.c_str(), &u.data.vec4[0]);
+				}
+				else
+				{
+					ImGui::DragFloat3(u.name.c_str(), &u.data.vec4[0]);
+				}
 			}
 			else if (u.type == GL_FLOAT_VEC4)
 			{
-				//ImGui::DragFloat4(u.name.c_str(), &u.data.vec4[0]);
-				ImGui::ColorEdit4(u.name.c_str(), &u.data.vec4[0]);
+				if (u.asColor)
+				{
+					ImGui::ColorEdit4(u.name.c_str(), &u.data.vec4[0]);
+				}else
+				{
+					ImGui::DragFloat4(u.name.c_str(), &u.data.vec4[0]);
+				}
 			}
-
 			else if (u.type == GL_INT)
 			{
 				ImGui::DragInt(u.name.c_str(), &u.data.ivec4[0]);
@@ -651,6 +661,7 @@ bool ShaderComponent::reload()
 
 	shader.clear();
 
+	std::vector<UniformEntry> parsedUniforms;
 
 	//get the data.
 	{
@@ -669,6 +680,7 @@ bool ShaderComponent::reload()
 
 		auto rez = tokenizeGLSL(fragmentData.c_str());
 
+		parsedUniforms = getUniforms(rez, fragmentData.c_str());
 
 		//for (auto &i : rez)
 		//{
@@ -889,6 +901,24 @@ bool ShaderComponent::reload()
 		};
 
 	}
+
+
+	for (auto &p : parsedUniforms)
+	{
+
+		for (auto &u : uniforms)
+		{
+
+			if (p.name == u.name)
+			{
+				u.asColor = p.asColor;
+			}
+
+		}
+
+
+	}
+
 
 	specialUniforms.iResolution = glGetUniformLocation(shader.id, "iResolution");
 	specialUniforms.iTime = glGetUniformLocation(shader.id, "iTime");

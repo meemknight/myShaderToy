@@ -68,6 +68,8 @@ struct Uniform
 		glm::uvec4 uvec4;
 	}data = {};
 
+	bool asColor = false;
+
 };
 
 struct ShaderInputBuffer

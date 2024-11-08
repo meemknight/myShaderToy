@@ -900,7 +900,6 @@ bool hasUniform(std::vector<Token> &tokens,
 		return 0;
 	};
 
-
 	auto consumeCommentsAndPragma = [&]()
 	{
 		if (eof()) { return false; }
@@ -958,7 +957,6 @@ bool hasUniform(std::vector<Token> &tokens,
 
 		if (!consumeString(type))
 		{
-			consume();
 			continue;
 		}
 
@@ -966,12 +964,173 @@ bool hasUniform(std::vector<Token> &tokens,
 		{
 			return true;
 		}
-
 	}
 
 
 
 	return false;
+}
+
+std::vector<UniformEntry> getUniforms(std::vector<Token> &tokens, const char *text)
+{
+
+	int pos = 0;
+
+	auto eof = [&]() -> bool
+	{
+		return pos >= tokens.size();
+	};
+
+	auto consume = [&]() { pos++; };
+
+	auto consumeString = [&](const char *s) -> bool
+	{
+		if (eof()) { return 0; }
+
+		if (tokens[pos].type == Token_String)
+		{
+			if (isStringViewSame(text, tokens[pos].start, tokens[pos].end, s))
+			{
+				consume();
+				return true;
+			}
+		}
+		return 0;
+	};
+
+	auto consumeAnyString = [&]() -> bool
+	{
+		if (eof()) { return 0; }
+
+		if (tokens[pos].type == Token_String)
+		{
+			consume();
+			return true;
+		}
+		return 0;
+	};
+
+	auto consumeCommentsAndPragma = [&]()
+	{
+		if (eof()) { return false; }
+
+		if (tokens[pos].type == Token_Comment || tokens[pos].type == Token_Directive)
+		{
+			consume();
+			return true;
+		}
+		return false;
+	};
+
+	auto consumeSymbol = [&](char s)
+	{
+		if (eof()) { return false; }
+
+		if (tokens[pos].type == Token_Symbol && tokens[pos].end - tokens[pos].start == 1
+			&& text[tokens[pos].start] == s
+			)
+		{
+			consume();
+			return true;
+		}
+		return false;
+	};
+
+	auto consumeNumber = [&]()
+	{
+		if (eof()) { return false; }
+
+		if (tokens[pos].type == Token_Number
+			)
+		{
+			consume();
+			return true;
+		}
+		return false;
+	};
+
+	auto consumeAllCommentsAndPragma = [&]()
+	{
+		while (consumeCommentsAndPragma()) {};
+	};
+
+
+	std::vector<UniformEntry> ret;
+
+	while (!eof())
+	{
+
+		if (!consumeString("uniform"))
+		{
+			consume();
+			continue;
+		}
+
+		consumeAllCommentsAndPragma();
+
+		//type
+		if (!consumeAnyString())
+		{
+			continue;
+		}
+
+		consumeAllCommentsAndPragma();
+
+		//name
+
+		if (eof()) { break; }
+		std::string name;
+
+		if (tokens[pos].type == Token_String)
+		{
+			name = std::string(
+				text + tokens[pos].start, text + tokens[pos].end);
+		}else
+		{
+			continue;
+		}
+
+		if (!consumeAnyString())
+		{
+			consume();
+			continue;
+		}
+
+		while (!eof())
+		{
+
+			if (consumeSymbol(';'))
+			{
+
+				UniformEntry entry;
+				entry.name = name;
+
+				if (tokens[pos].type == Token_Comment)
+				{
+					std::string comment = std::string(
+						text + tokens[pos].start, text + tokens[pos].end);
+
+					if (comment == "//asColor")
+					{
+						entry.asColor = true;
+					}
+				}
+
+				ret.push_back(entry);
+				break;
+			}
+			else
+			{
+				consume();
+			}
+		}
+
+		if (eof()) { break; }
+
+	}
+
+
+	return ret;
 }
 
 
