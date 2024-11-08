@@ -4,8 +4,11 @@ layout (location = 0) in vec2 p;
 
 out vec2 v_position;
 
+uniform mat4 iProjecton;
+uniform mat4 iView;
+
 void main()
 {
-	gl_Position = vec4(p, 0, 1);
 	v_position = p;
+	gl_Position = iProjecton * iView * vec4(p, 0, 1);
 }

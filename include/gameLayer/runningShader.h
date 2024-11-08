@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <vector>
 #include <imfilebrowser.h>
+#include <camera.h>
 
 struct Renderer2D
 {
@@ -83,7 +84,9 @@ struct RunningShader;
 struct ShaderComponent
 {
 	char name[300] = {};
+	char vertexName[300] = {};
 	ImGui::FileBrowser fileDialogue;
+	ImGui::FileBrowser fileDialogueVertex;
 
 	Shader shader;
 	gl2d::FrameBuffer frameBuffer;
@@ -112,6 +115,10 @@ struct ShaderComponent
 		uniform iChannel1 = -1;
 		uniform iChannel2 = -1;
 		uniform iChannel3 = -1;
+		uniform iView	  = -1;			 //view matrix							-> mat4
+		uniform iModel	  = -1;			 //model matrix							-> mat4
+		uniform iProjecton = -1;		 //projection matrix					-> mat4
+		uniform iMVP= -1;				 //movel view projection matrix			-> mat4
 		//uniform iDate;                 // (year, month, day, time in seconds)	->	vec4      
 		//uniform iSampleRate;           // sound sample rate (i.e., 44100)		->	float     
 
@@ -126,6 +133,7 @@ struct RunningShader
 
 	ShaderComponent shaderBuffers[4];
 
+	Camera camera;
 
 	bool init(const char *name);
 

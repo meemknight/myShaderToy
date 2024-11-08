@@ -28,13 +28,16 @@ bool RunningShader::init(const char *name)
 
 void RunningShader::updateSize()
 {
+
+	camera.aspectRatio = (float)w / h;
+
 	mainShader.frameBuffer.resize(w, h);
-	//mainShader.frameBuffer.clear();
+	mainShader.frameBuffer.clear();
 
 	for (int i = 0; i < 4; i++)
 	{
 		shaderBuffers[i].frameBuffer.resize(w, h);
-		//shaderBuffers[i].frameBuffer.clear();
+		shaderBuffers[i].frameBuffer.clear();
 	}
 }
 
@@ -64,41 +67,100 @@ void RunningShader::displaySettings(Renderer2D &renderer)
 	auto displayShader = [&](ShaderComponent &shaderBuffer)
 	{
 
-			
-		if (ImGui::Button(ICON_FK_FOLDER_OPEN_O))
-		{
-			shaderBuffer.fileDialogue.SetTitle("Select shader");
-			shaderBuffer.fileDialogue.SetTypeFilters({".frag", ".vert", ".glsl", ".txt", ".*"});
-			shaderBuffer.fileDialogue.SetPwd(RESOURCES_PATH);
 		
-			shaderBuffer.fileDialogue.Open();
+		//fragment file
+		{
+			if (ImGui::Button(ICON_FK_FOLDER_OPEN_O))
+			{
+				shaderBuffer.fileDialogue.SetTitle("Select shader");
+				shaderBuffer.fileDialogue.SetTypeFilters({".frag", ".vert", ".glsl", ".txt", ".*"});
+				shaderBuffer.fileDialogue.SetPwd(RESOURCES_PATH);
 
-		}
-		
-		ImGui::SameLine();
+				shaderBuffer.fileDialogue.Open();
 
-		if (ImGui::Button(ICON_FK_REPEAT))
-		{
-			shaderBuffer.reload();
-		}
-		
-		ImGui::SameLine();
-		ImGui::InputText("##input text file", shaderBuffer.name, sizeof(shaderBuffer.name));
-		
-		shaderBuffer.fileDialogue.Display();
-		
-		if (shaderBuffer.fileDialogue.HasSelected())
-		{
-			strncpy(shaderBuffer.name, shaderBuffer.fileDialogue.GetSelected().string().c_str(), sizeof(shaderBuffer.name));
-			shaderBuffer.fileDialogue.ClearSelected();
-		
-			shaderBuffer.reload();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button(ICON_FK_REPEAT))
+			{
+				shaderBuffer.reload();
+			}
+
+			ImGui::SameLine();
+			ImGui::InputText("##input text file", shaderBuffer.name, sizeof(shaderBuffer.name));
+
+			shaderBuffer.fileDialogue.Display();
+
+			if (shaderBuffer.fileDialogue.HasSelected())
+			{
+				strncpy(shaderBuffer.name, shaderBuffer.fileDialogue.GetSelected().string().c_str(), sizeof(shaderBuffer.name));
+				shaderBuffer.fileDialogue.ClearSelected();
+
+				shaderBuffer.reload();
+			}
+
+			if (!shaderBuffer.shader.id)
+			{
+				return;
+			}
 		}
 
-		if (!shaderBuffer.shader.id)
+		//vertex file
 		{
-			return;
+			if (ImGui::Button(ICON_FK_FOLDER_OPEN_O "##2"))
+			{
+				shaderBuffer.fileDialogueVertex.SetTitle("Select shader");
+				shaderBuffer.fileDialogueVertex.SetTypeFilters({".vert", ".frag", ".glsl", ".txt", ".*"});
+				shaderBuffer.fileDialogueVertex.SetPwd(RESOURCES_PATH);
+
+				shaderBuffer.fileDialogueVertex.Open();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button(ICON_FK_REPEAT "##2"))
+			{
+				shaderBuffer.reload();
+			}
+
+			ImGui::SameLine();
+			ImGui::InputText("##input text file 2", shaderBuffer.vertexName, sizeof(shaderBuffer.vertexName));
+
+			shaderBuffer.fileDialogueVertex.Display();
+
+			if (shaderBuffer.fileDialogueVertex.HasSelected())
+			{
+				strncpy(shaderBuffer.vertexName, shaderBuffer.fileDialogueVertex.GetSelected().string().c_str(), sizeof(shaderBuffer.vertexName));
+				shaderBuffer.fileDialogueVertex.ClearSelected();
+
+				shaderBuffer.reload();
+			}
+
+			if (!shaderBuffer.shader.id)
+			{
+				return;
+			}
 		}
+
+
+		ImGui::Text("Camera controll: ");
+		ImGui::Separator();
+		ImGui::NewLine();
+
+		if (shaderBuffer.specialUniforms.iView)
+		{
+
+			ImGui::DragFloat3("Camera Position: ", &camera.position[0], 0.1);
+
+			glm::vec2 rotateCamera = {};
+
+			ImGui::DragFloat2("Rotate Camera: ", &rotateCamera[0], 0.1);
+			camera.rotateCamera(rotateCamera);
+
+			rotateCamera = {};
+		}
+
 
 		ImGui::Text("Uniforms: ");
 		ImGui::Separator();
@@ -554,6 +616,10 @@ const char *uniformNames[] = {
 	"iChannel1",
 	"iChannel2",
 	"iChannel3",
+	"iProjecton",
+	"iMVP",
+	"iModel",
+	"iView",
 };
 
 std::string readFileToString(const char *filePath)
@@ -588,7 +654,15 @@ bool ShaderComponent::reload()
 
 	//get the data.
 	{
-		std::string vertexData = readFileToString(RESOURCES_PATH "default.vert");
+
+		const char *vertexFinalName = RESOURCES_PATH "default.vert";
+
+		if (vertexName[0] != 0)
+		{
+			vertexFinalName = vertexName;
+		}
+
+		std::string vertexData = readFileToString(vertexFinalName);
 		std::string fragmentData = readFileToString((std::string(this->name)).c_str());
 
 		//todo error couldn't load files and stuff
@@ -678,6 +752,18 @@ bool ShaderComponent::reload()
 
 		if (!hasUniform(rez, fragmentData.c_str(), "iChannel3", "sampler2D"))
 		{newFragmentStart += "\nuniform sampler2D iChannel3;\n";}
+
+		if (!hasUniform(rez, fragmentData.c_str(), "iView", "mat4"))
+		{newFragmentStart += "\nuniform mat4 iView;\n";}
+
+		if (!hasUniform(rez, fragmentData.c_str(), "iModel", "mat4"))
+		{newFragmentStart += "\nuniform mat4 iModel;\n";}
+
+		if (!hasUniform(rez, fragmentData.c_str(), "iProjecton", "mat4"))
+		{newFragmentStart += "\nuniform mat4 iProjecton;\n";}
+
+		if (!hasUniform(rez, fragmentData.c_str(), "iMVP", "mat4"))
+		{newFragmentStart += "\nuniform mat4 iMVP;\n";}
 
 	#pragma endregion
 
@@ -816,6 +902,10 @@ bool ShaderComponent::reload()
 	specialUniforms.iChannel2 = glGetUniformLocation(shader.id, "iChannel2");
 	specialUniforms.iChannel3 = glGetUniformLocation(shader.id, "iChannel3");
 	
+	specialUniforms.iView = glGetUniformLocation(shader.id, "iView");
+	specialUniforms.iModel = glGetUniformLocation(shader.id, "iModel");
+	specialUniforms.iProjecton = glGetUniformLocation(shader.id, "iProjecton");
+	specialUniforms.iMVP = glGetUniformLocation(shader.id, "iMVP");
 	
 
 	return true;
@@ -920,6 +1010,11 @@ void ShaderComponent::bindAndSendUniforms(Renderer2D &renderer, RunningShader &r
 	glUniform1i(specialUniforms.iChannel1, 1);
 	glUniform1i(specialUniforms.iChannel2, 2);
 	glUniform1i(specialUniforms.iChannel3, 3);
+
+
+	glUniformMatrix4fv(specialUniforms.iProjecton, 1, 0, &runningShader.camera.getProjectionMatrix()[0][0]);
+	glUniformMatrix4fv(specialUniforms.iView, 1, 0, &runningShader.camera.getViewMatrix()[0][0]);
+
 
 	
 	for (int i = 0; i < 4; i++)
@@ -1108,7 +1203,7 @@ void Renderer2D::WebCamera::startCapture()
 
 void Renderer2D::WebCamera::doCapture()
 {
-	if (!isCapturing)return;
+	if (!isCapturing) return;
 
 	int hardCounter = 0;
 	::doCapture(0); while (isCaptureDone(0) == 0) {};
