@@ -173,6 +173,7 @@ void RunningShader::displaySettings(Renderer2D &renderer)
 			if (u.type == GL_FLOAT)
 			{
 				ImGui::DragFloat(u.name.c_str(), &u.data.vec4[0]);
+				//ImGui::SliderFloat(u.name.c_str(), &u.data.vec4[0], 0, 1);
 			}
 			else if (u.type == GL_FLOAT_VEC2)
 			{
