@@ -22,7 +22,7 @@ bool initGame()
 	gl2d::init();
 
 
-	runningShader.init(RESOURCES_PATH "test.frag");
+	runningShader.init(RESOURCES_PATH "mario.frag");
 	renderer.init();
 	renderer.loadDefaultTextures();
 

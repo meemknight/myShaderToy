@@ -29,7 +29,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     {
         vec2 off = vec2(float(i),float(j));
         
-        vec4 tmp = texture( iChannel0, q + off/(vec2(800.0,450.0)*10) ); 
+        vec4 tmp = texture( iChannel0, q + off/(vec2(800.0,450.0)) ); 
         
         float depth = tmp.w;
         
@@ -58,4 +58,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col *= 0.8 + 0.3*sqrt( 16.0*q.x*q.y*(1.0-q.x)*(1.0-q.y) );
 
     fragColor = vec4(col,1.0);
+
+	//fragColor.r = texture( iChannel0, q ).a / 10.f;
+	//fragColor.g = texture( iChannel0, q ).a / 10.f;
+	//fragColor.b = texture( iChannel0, q ).a / 10.f;
+	//fragColor.a = 1;
 }
