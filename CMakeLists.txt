@@ -46,7 +46,9 @@ add_subdirectory(thirdparty/safeSave)			#saving data, designed for gamedev. It a
 add_subdirectory(thirdparty/profilerLib)		#profiling, just a simpe library for measuring elapsed time
 add_subdirectory(thirdparty/gl2d)				#2D rendering library
 add_subdirectory(thirdparty/glui)				#ui library, usefull for making game menus
+if (CMAKE_HOST_WIN32)
 add_subdirectory(thirdparty/escapi)
+endif()
 
 
 # MY_SOURCES is defined to be a list of all the source files for my game 
@@ -98,5 +100,12 @@ target_include_directories("${CMAKE_PROJECT_NAME}" PUBLIC "${CMAKE_CURRENT_SOURC
 #	glad stb_image stb_truetype gl2d raudio imgui safeSave profilerLib enet glui)
 
 #enet not working yet on linux for some reason
+
+# escapi no on linux
+if (CMAKE_HOST_WIN32)
+	set(ESCAPI_LIB escapi)
+endif()
+
 target_link_libraries("${CMAKE_PROJECT_NAME}" PRIVATE glm glfw 
-	glad stb_image stb_truetype gl2d raudio imgui safeSave profilerLib glui escapi)
+	glad stb_image stb_truetype gl2d raudio imgui safeSave profilerLib glui ${ESCAPI_LIB}
+	)

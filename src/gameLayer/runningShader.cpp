@@ -7,8 +7,20 @@
 #include <fstream>
 #include <glslGrammar.h>
 #include <imguiStuff.h>
-#include <escapi/escapi.h>
 #include <IconsForkAwesome.h>
+
+#ifdef _WIN32
+#include <escapi/escapi.h>
+#else
+// Pretend ESCAPI exists and finds no cameras
+// implement video4linux2 at some point
+struct SimpleCapParams {int *mTargetBuf = nullptr; int mWidth = 0, mHeight = 0; };
+inline int setupESCAPI() {return 0;}
+inline int initCapture(int /*device*/, SimpleCapParams * /*params*/) { return 0; }
+inline void deinitCapture(int /*device*/) {}
+inline void doCapture(int /*device*/) {}
+inline int isCaptureDone(int /*device*/) {return 1;}
+#endif
 
 bool RunningShader::init(const char *name)
 {
