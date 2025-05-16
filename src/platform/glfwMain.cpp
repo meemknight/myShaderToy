@@ -380,8 +380,12 @@ int main()
 		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
 		//io.ConfigViewportsNoAutoMerge = true;
 		//io.ConfigViewportsNoTaskBarIcon = true;
-	
-		io.FontGlobalScale = 3;
+
+#if defined(USER_IS_BLIND_OR_YOUTUBER)
+        io.FontGlobalScale = 3;
+#else
+		io.FontGlobalScale = 1;
+#endif		
 
 		ImGuiStyle& style = ImGui::GetStyle();
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)

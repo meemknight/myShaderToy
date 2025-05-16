@@ -5,6 +5,9 @@ cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# create compile commands for clangd and other tools to consume
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 #! ! ! ! ! ! !
 #set this to true to ship the game!
 #basically this will change the RESOURCES_PATH to be the local path
@@ -25,6 +28,10 @@ endif()
 
 project(mygame)
 
+set (USER_IS_BLIND_OR_YOUTUBER ON) # font scale 3
+if (USER_IS_BLIND_OR_YOUTUBER)
+	add_compile_definitions(USER_IS_BLIND_OR_YOUTUBER=1)
+endif()
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)

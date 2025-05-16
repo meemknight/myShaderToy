@@ -99,7 +99,7 @@ struct ShaderComponent
 	bool inputSelectorOpen = 0;
 	ShaderInputBuffer inputBuffers[4];
 
-	bool reload();
+	bool reload(std::string data = "");
 
 	void bindAndSendUniforms(Renderer2D &renderer, RunningShader &runningShader);
 
