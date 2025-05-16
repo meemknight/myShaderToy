@@ -49,7 +49,7 @@ GLint createShaderFromData(const char* data, GLenum shaderType)
 GLint createShaderFromFile(const char* source, GLenum shaderType)
 {
 	std::ifstream file;
-	file.open(source);
+	file.open(source, std::ios::binary); // prevent new line conversions on windows
 
 	if (!file.is_open())
 	{
@@ -82,14 +82,14 @@ bool Shader::loadShaderProgramFromFile(const char* vertexShader, const char* fra
 
 	auto vertexId = createShaderFromFile(vertexShader, GL_VERTEX_SHADER);
 
-	if (vertexId == 0) { return 0; }
+	if (vertexId == 0) { return false; }
 
 	auto fragmentId = createShaderFromFile(fragmentShader, GL_FRAGMENT_SHADER);
 
 	if (fragmentId == 0)
 	{
 		glDeleteShader(vertexId);
-		return 0;
+		return false;
 	}
 
 	id = glCreateProgram();
@@ -112,17 +112,24 @@ bool Shader::loadShaderProgramFromFile(const char* vertexShader, const char* fra
 
 		glGetProgramiv(id, GL_INFO_LOG_LENGTH, &l);
 
-		message = new char[l];
+		if (l) 
+		{
+			message = new char[l];
 
-		glGetProgramInfoLog(id, l, &l, message);
+			glGetProgramInfoLog(id, l, &l, message); // includes the null terminator
 
-		std::cout << "Link error: " << message << "\n";
+			std::cout << "Link error: " << message << "\n";
 
-		delete[] message;
+			delete[] message;
+		}
+		else
+		{
+			std::cout << "Link error: unknown error\n";
+		}
 
 		glDeleteProgram(id);
 		id = 0;
-		return 0;
+		return false;
 	}
 
 	glValidateProgram(id);
@@ -134,14 +141,14 @@ bool Shader::loadShaderProgramFromData(const char *vertexData, const char *fragm
 {
 	auto vertexId = createShaderFromData(vertexData, GL_VERTEX_SHADER);
 
-	if (vertexId == 0) { return 0; }
+	if (vertexId == 0) { return false; }
 
 	auto fragmentId = createShaderFromData(fragmentData, GL_FRAGMENT_SHADER);
 
 	if (fragmentId == 0)
 	{
 		glDeleteShader(vertexId);
-		return 0;
+		return false;
 	}
 
 	id = glCreateProgram();
@@ -174,7 +181,7 @@ bool Shader::loadShaderProgramFromData(const char *vertexData, const char *fragm
 
 		glDeleteProgram(id);
 		id = 0;
-		return 0;
+		return false;
 	}
 
 	glValidateProgram(id);
@@ -191,7 +198,7 @@ bool Shader::loadShaderProgramFromFile(const char* vertexShader, const char* geo
 
 	if (vertexId == 0 || fragmentId == 0 || geometryId == 0)
 	{
-		return 0;
+		return false;
 	}
 
 	id = glCreateProgram();
@@ -216,17 +223,22 @@ bool Shader::loadShaderProgramFromFile(const char* vertexShader, const char* geo
 
 		glGetProgramiv(id, GL_INFO_LOG_LENGTH, &l);
 
-		message = new char[l];
+		if (l) {
+			message = new char[l];
 
-		glGetProgramInfoLog(id, l, &l, message);
+			glGetProgramInfoLog(id, l, &l, message);
 
-		std::cout << "Link error: " << message << "\n";
+			std::cout << "Link error: " << message << "\n";
 
-		delete[] message;
+			delete[] message;
+		}
+		else {
+			std::cout << "Link error: unknown error\n";
+		}
 
 		glDeleteProgram(id);
 		id = 0;
-		return 0;
+		return false;
 	}
 
 	glValidateProgram(id);

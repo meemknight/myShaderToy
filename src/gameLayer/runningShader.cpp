@@ -7,8 +7,20 @@
 #include <fstream>
 #include <glslGrammar.h>
 #include <imguiStuff.h>
-#include <escapi/escapi.h>
 #include <IconsForkAwesome.h>
+
+#ifdef _WIN32
+#include <escapi/escapi.h>
+#else
+// Pretend ESCAPI exists and finds no cameras
+// implement video4linux2 at some point
+struct SimpleCapParams {int *mTargetBuf = nullptr; int mWidth = 0, mHeight = 0; };
+inline int setupESCAPI() {return 0;}
+inline int initCapture(int /*device*/, SimpleCapParams * /*params*/) { return 0; }
+inline void deinitCapture(int /*device*/) {}
+inline void doCapture(int /*device*/) {}
+inline int isCaptureDone(int /*device*/) {return 1;}
+#endif
 
 bool RunningShader::init(const char *name)
 {
@@ -52,6 +64,16 @@ void RunningShader::displayImgui(Renderer2D &renderer)
 	//std::string textEditorName = std::string(this->mainShader.name) + " edit";
 	std::string textEditorName = "Code Editor";
 	ImGui::Begin(textEditorName.c_str());
+
+	static bool showRecompile = false;	
+	if (!showRecompile && mainShader.textEditor.IsTextChanged()) showRecompile = true;
+	
+	if (showRecompile && ImGui::Button("Recompile"))
+	{
+		mainShader.reload(mainShader.textEditor.GetText());
+		showRecompile = false;
+	}
+
 	mainShader.textEditor.Render(textEditorName.c_str());
 	ImGui::End();
 }
@@ -655,7 +677,7 @@ std::string readFileToString(const char *filePath)
 	return content;
 }
 
-bool ShaderComponent::reload()
+bool ShaderComponent::reload(std::string data)
 {
 	uniforms.clear();
 	specialUniforms = {};
@@ -666,7 +688,6 @@ bool ShaderComponent::reload()
 
 	//get the data.
 	{
-
 		const char *vertexFinalName = RESOURCES_PATH "default.vert";
 
 		if (vertexName[0] != 0)
@@ -675,9 +696,14 @@ bool ShaderComponent::reload()
 		}
 
 		std::string vertexData = readFileToString(vertexFinalName);
-		std::string fragmentData = readFileToString((std::string(this->name)).c_str());
 
-		//todo error couldn't load files and stuff
+		std::string fragmentData = "";
+
+		if (data.size())
+			fragmentData = data;
+		else
+			fragmentData = readFileToString((std::string(this->name)).c_str());
+        	//todo error couldn't load files and stuff
 
 		auto rez = tokenizeGLSL(fragmentData.c_str());
 
@@ -834,7 +860,8 @@ bool ShaderComponent::reload()
 		return 0;
 	}
 
-	//text editor
+	// update text editor if we were not given data
+	if (data.empty())
 	{
 		std::ifstream file;
 		file.open(std::string(this->name));

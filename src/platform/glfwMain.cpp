@@ -33,6 +33,10 @@
 
 #ifdef _WIN32
 #include <Windows.h>
+extern "C" {
+__declspec(dllexport) unsigned long NvOptimusEnablement = 1;
+__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
 #endif
 
 #undef min
@@ -44,11 +48,6 @@ bool fullScreen = 0;
 
 #pragma endregion
 
-extern "C"
-{
-	__declspec(dllexport) unsigned long NvOptimusEnablement = 1;
-	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
-}
 
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
@@ -381,8 +380,12 @@ int main()
 		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
 		//io.ConfigViewportsNoAutoMerge = true;
 		//io.ConfigViewportsNoTaskBarIcon = true;
-	
-		io.FontGlobalScale = 3;
+
+#if defined(USER_IS_BLIND_OR_YOUTUBER)
+        io.FontGlobalScale = 3;
+#else
+		io.FontGlobalScale = 1;
+#endif		
 
 		ImGuiStyle& style = ImGui::GetStyle();
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)

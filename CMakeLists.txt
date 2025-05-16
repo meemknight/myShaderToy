@@ -5,6 +5,9 @@ cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# create compile commands for clangd and other tools to consume
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 #! ! ! ! ! ! !
 #set this to true to ship the game!
 #basically this will change the RESOURCES_PATH to be the local path
@@ -25,6 +28,10 @@ endif()
 
 project(mygame)
 
+set (USER_IS_BLIND_OR_YOUTUBER ON) # font scale 3
+if (USER_IS_BLIND_OR_YOUTUBER)
+	add_compile_definitions(USER_IS_BLIND_OR_YOUTUBER=1)
+endif()
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -46,7 +53,9 @@ add_subdirectory(thirdparty/safeSave)			#saving data, designed for gamedev. It a
 add_subdirectory(thirdparty/profilerLib)		#profiling, just a simpe library for measuring elapsed time
 add_subdirectory(thirdparty/gl2d)				#2D rendering library
 add_subdirectory(thirdparty/glui)				#ui library, usefull for making game menus
+if (CMAKE_HOST_WIN32)
 add_subdirectory(thirdparty/escapi)
+endif()
 
 
 # MY_SOURCES is defined to be a list of all the source files for my game 
@@ -98,5 +107,12 @@ target_include_directories("${CMAKE_PROJECT_NAME}" PUBLIC "${CMAKE_CURRENT_SOURC
 #	glad stb_image stb_truetype gl2d raudio imgui safeSave profilerLib enet glui)
 
 #enet not working yet on linux for some reason
+
+# escapi no on linux
+if (CMAKE_HOST_WIN32)
+	set(ESCAPI_LIB escapi)
+endif()
+
 target_link_libraries("${CMAKE_PROJECT_NAME}" PRIVATE glm glfw 
-	glad stb_image stb_truetype gl2d raudio imgui safeSave profilerLib glui escapi)
+	glad stb_image stb_truetype gl2d raudio imgui safeSave profilerLib glui ${ESCAPI_LIB}
+	)
